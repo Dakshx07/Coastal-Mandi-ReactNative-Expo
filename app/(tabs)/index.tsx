@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Animated, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
@@ -35,71 +35,21 @@ const WEATHER_DATA: Record<string, { temp: number; condition: string; wind: numb
   'Chennai Kasimedu': { temp: 33, condition: 'Warm', wind: 16, humidity: 70 },
 };
 
-// Species data per harbour with their own prices
-const HARBOUR_SPECIES: Record<string, SpeciesData[]> = {
-  'Kochi Harbour': [
-    { id: 'k1', name: 'Seer Fish', scientificName: 'Neymeen / Surmai', price: 607, trend: 'down', trendPercentage: 12.79, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 95 },
-    { id: 'k2', name: 'Pomfret (Black)', scientificName: 'Avoli / Halwa', price: 602, trend: 'down', trendPercentage: 10.81, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 95 },
-    { id: 'k3', name: 'Crab', scientificName: 'Njandu / Kekda', price: 455, trend: 'up', trendPercentage: 3.2, imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200', trustScore: 92 },
-    { id: 'k4', name: 'Prawns (Medium)', scientificName: 'Chemmeen', price: 386, trend: 'down', trendPercentage: 0.52, imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200', trustScore: 90 },
-    { id: 'k5', name: 'Red Snapper', scientificName: 'Chempalli', price: 373, trend: 'up', trendPercentage: 1.08, imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200', trustScore: 88 },
-    { id: 'k6', name: 'Tuna', scientificName: 'Choora', price: 280, trend: 'up', trendPercentage: 4.5, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 91 },
-    { id: 'k7', name: 'Mackerel', scientificName: 'Ayala', price: 230, trend: 'up', trendPercentage: 8.4, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 93 },
-    { id: 'k8', name: 'Sardine', scientificName: 'Mathi / Chaala', price: 141, trend: 'up', trendPercentage: 5.2, imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200', trustScore: 94 },
-    { id: 'k9', name: 'Anchovies', scientificName: 'Netholi / Kozhuva', price: 120, trend: 'up', trendPercentage: 2.8, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 89 },
-    { id: 'k10', name: 'King Fish', scientificName: 'Ney Meen', price: 520, trend: 'down', trendPercentage: 3.1, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 92 },
-  ],
-  'Vizag Fishing Harbour': [
-    { id: 'v1', name: 'Seer Fish', scientificName: 'Neymeen / Surmai', price: 658, trend: 'up', trendPercentage: 8.4, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 93 },
-    { id: 'v2', name: 'Pomfret (Black)', scientificName: 'Avoli / Halwa', price: 667, trend: 'up', trendPercentage: 10.8, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 94 },
-    { id: 'v3', name: 'Crab', scientificName: 'Njandu / Kekda', price: 398, trend: 'down', trendPercentage: 12.5, imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200', trustScore: 90 },
-    { id: 'v4', name: 'Prawns (Medium)', scientificName: 'Chemmeen', price: 421, trend: 'up', trendPercentage: 9.1, imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200', trustScore: 92 },
-    { id: 'v5', name: 'Red Snapper', scientificName: 'Chempalli', price: 342, trend: 'down', trendPercentage: 8.3, imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200', trustScore: 87 },
-    { id: 'v6', name: 'Tuna', scientificName: 'Choora', price: 262, trend: 'down', trendPercentage: 6.4, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 89 },
-    { id: 'v7', name: 'Mackerel', scientificName: 'Ayala', price: 188, trend: 'down', trendPercentage: 18.3, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 91 },
-    { id: 'v8', name: 'Sardine', scientificName: 'Mathi / Chaala', price: 118, trend: 'down', trendPercentage: 16.3, imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200', trustScore: 92 },
-    { id: 'v9', name: 'Anchovies', scientificName: 'Netholi / Kozhuva', price: 95, trend: 'down', trendPercentage: 20.8, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 88 },
-    { id: 'v10', name: 'King Fish', scientificName: 'Ney Meen', price: 485, trend: 'down', trendPercentage: 6.7, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 91 },
-  ],
-  'Mangalore Old Port': [
-    { id: 'm1', name: 'Seer Fish', scientificName: 'Neymeen / Surmai', price: 580, trend: 'down', trendPercentage: 4.4, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 94 },
-    { id: 'm2', name: 'Pomfret (Black)', scientificName: 'Avoli / Halwa', price: 590, trend: 'down', trendPercentage: 2.0, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 93 },
-    { id: 'm3', name: 'Crab', scientificName: 'Njandu / Kekda', price: 478, trend: 'up', trendPercentage: 5.1, imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200', trustScore: 91 },
-    { id: 'm4', name: 'Prawns (Medium)', scientificName: 'Chemmeen', price: 365, trend: 'down', trendPercentage: 5.4, imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200', trustScore: 89 },
-    { id: 'm5', name: 'Red Snapper', scientificName: 'Chempalli', price: 398, trend: 'up', trendPercentage: 6.7, imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200', trustScore: 90 },
-    { id: 'm6', name: 'Tuna', scientificName: 'Choora', price: 295, trend: 'up', trendPercentage: 5.4, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 92 },
-    { id: 'm7', name: 'Mackerel', scientificName: 'Ayala', price: 245, trend: 'up', trendPercentage: 6.5, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 94 },
-    { id: 'm8', name: 'Sardine', scientificName: 'Mathi / Chaala', price: 155, trend: 'up', trendPercentage: 9.9, imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200', trustScore: 93 },
-    { id: 'm9', name: 'Anchovies', scientificName: 'Netholi / Kozhuva', price: 132, trend: 'up', trendPercentage: 10.0, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 90 },
-    { id: 'm10', name: 'King Fish', scientificName: 'Ney Meen', price: 548, trend: 'up', trendPercentage: 5.4, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 93 },
-  ],
-  'Sassoon Dock': [
-    { id: 's1', name: 'Seer Fish', scientificName: 'Neymeen / Surmai', price: 695, trend: 'up', trendPercentage: 14.5, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 96 },
-    { id: 's2', name: 'Pomfret (Black)', scientificName: 'Avoli / Halwa', price: 720, trend: 'up', trendPercentage: 19.6, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 97 },
-    { id: 's3', name: 'Crab', scientificName: 'Njandu / Kekda', price: 512, trend: 'up', trendPercentage: 12.5, imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200', trustScore: 94 },
-    { id: 's4', name: 'Prawns (Medium)', scientificName: 'Chemmeen', price: 425, trend: 'up', trendPercentage: 10.1, imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200', trustScore: 93 },
-    { id: 's5', name: 'Red Snapper', scientificName: 'Chempalli', price: 428, trend: 'up', trendPercentage: 14.7, imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200', trustScore: 91 },
-    { id: 's6', name: 'Tuna', scientificName: 'Choora', price: 315, trend: 'up', trendPercentage: 12.5, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 93 },
-    { id: 's7', name: 'Mackerel', scientificName: 'Ayala', price: 268, trend: 'up', trendPercentage: 16.5, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 95 },
-    { id: 's8', name: 'Sardine', scientificName: 'Mathi / Chaala', price: 168, trend: 'up', trendPercentage: 19.1, imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200', trustScore: 94 },
-    { id: 's9', name: 'Anchovies', scientificName: 'Netholi / Kozhuva', price: 145, trend: 'up', trendPercentage: 20.8, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 91 },
-    { id: 's10', name: 'King Fish', scientificName: 'Ney Meen', price: 595, trend: 'up', trendPercentage: 14.4, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 94 },
-  ],
-  'Chennai Kasimedu': [
-    { id: 'c1', name: 'Seer Fish', scientificName: 'Neymeen / Surmai', price: 625, trend: 'up', trendPercentage: 3.0, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 93 },
-    { id: 'c2', name: 'Pomfret (Black)', scientificName: 'Avoli / Halwa', price: 612, trend: 'up', trendPercentage: 1.7, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 92 },
-    { id: 'c3', name: 'Crab', scientificName: 'Njandu / Kekda', price: 435, trend: 'down', trendPercentage: 4.4, imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200', trustScore: 90 },
-    { id: 'c4', name: 'Prawns (Medium)', scientificName: 'Chemmeen', price: 378, trend: 'down', trendPercentage: 2.1, imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200', trustScore: 91 },
-    { id: 'c5', name: 'Red Snapper', scientificName: 'Chempalli', price: 352, trend: 'down', trendPercentage: 5.6, imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200', trustScore: 88 },
-    { id: 'c6', name: 'Tuna', scientificName: 'Choora', price: 248, trend: 'down', trendPercentage: 11.4, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 89 },
-    { id: 'c7', name: 'Mackerel', scientificName: 'Ayala', price: 198, trend: 'down', trendPercentage: 13.9, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200', trustScore: 91 },
-    { id: 'c8', name: 'Sardine', scientificName: 'Mathi / Chaala', price: 125, trend: 'down', trendPercentage: 11.3, imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200', trustScore: 92 },
-    { id: 'c9', name: 'Anchovies', scientificName: 'Netholi / Kozhuva', price: 108, trend: 'down', trendPercentage: 10.0, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200', trustScore: 88 },
-    { id: 'c10', name: 'King Fish', scientificName: 'Ney Meen', price: 498, trend: 'down', trendPercentage: 4.2, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200', trustScore: 91 },
-  ],
-};
+// All species with local names and images
+const ALL_SPECIES = [
+  { name: 'Seer Fish', scientificName: 'Neymeen / Surmai', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
+  { name: 'Pomfret (Black)', scientificName: 'Avoli / Halwa', imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200' },
+  { name: 'Crab', scientificName: 'Njandu / Kekda', imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200' },
+  { name: 'Prawns (Medium)', scientificName: 'Chemmeen', imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200' },
+  { name: 'Red Snapper', scientificName: 'Chempalli', imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200' },
+  { name: 'Tuna', scientificName: 'Choora', imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200' },
+  { name: 'Mackerel', scientificName: 'Ayala', imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200' },
+  { name: 'Sardine', scientificName: 'Mathi / Chaala', imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200' },
+  { name: 'Anchovies', scientificName: 'Netholi / Kozhuva', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
+  { name: 'King Fish', scientificName: 'Ney Meen', imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200' },
+];
 
-// Cross-harbour prices for search
+// Cross-harbour prices for ALL fish
 const CROSS_HARBOUR_PRICES: Record<string, Record<string, { price: number; trend: 'up' | 'down'; trendPercentage: number }>> = {
   'Seer Fish': {
     'Kochi Harbour': { price: 607, trend: 'down', trendPercentage: 13 },
@@ -115,7 +65,79 @@ const CROSS_HARBOUR_PRICES: Record<string, Record<string, { price: number; trend
     'Sassoon Dock': { price: 720, trend: 'up', trendPercentage: 20 },
     'Chennai Kasimedu': { price: 612, trend: 'up', trendPercentage: 2 },
   },
-  // Add more fish here as needed
+  'Crab': {
+    'Kochi Harbour': { price: 455, trend: 'up', trendPercentage: 3 },
+    'Vizag Fishing Harbour': { price: 398, trend: 'down', trendPercentage: 13 },
+    'Mangalore Old Port': { price: 478, trend: 'up', trendPercentage: 5 },
+    'Sassoon Dock': { price: 512, trend: 'up', trendPercentage: 13 },
+    'Chennai Kasimedu': { price: 435, trend: 'down', trendPercentage: 4 },
+  },
+  'Prawns (Medium)': {
+    'Kochi Harbour': { price: 386, trend: 'down', trendPercentage: 1 },
+    'Vizag Fishing Harbour': { price: 421, trend: 'up', trendPercentage: 9 },
+    'Mangalore Old Port': { price: 365, trend: 'down', trendPercentage: 5 },
+    'Sassoon Dock': { price: 425, trend: 'up', trendPercentage: 10 },
+    'Chennai Kasimedu': { price: 378, trend: 'down', trendPercentage: 2 },
+  },
+  'Red Snapper': {
+    'Kochi Harbour': { price: 373, trend: 'up', trendPercentage: 1 },
+    'Vizag Fishing Harbour': { price: 342, trend: 'down', trendPercentage: 8 },
+    'Mangalore Old Port': { price: 398, trend: 'up', trendPercentage: 7 },
+    'Sassoon Dock': { price: 428, trend: 'up', trendPercentage: 15 },
+    'Chennai Kasimedu': { price: 352, trend: 'down', trendPercentage: 6 },
+  },
+  'Tuna': {
+    'Kochi Harbour': { price: 280, trend: 'up', trendPercentage: 5 },
+    'Vizag Fishing Harbour': { price: 262, trend: 'down', trendPercentage: 6 },
+    'Mangalore Old Port': { price: 295, trend: 'up', trendPercentage: 5 },
+    'Sassoon Dock': { price: 315, trend: 'up', trendPercentage: 13 },
+    'Chennai Kasimedu': { price: 248, trend: 'down', trendPercentage: 11 },
+  },
+  'Mackerel': {
+    'Kochi Harbour': { price: 230, trend: 'up', trendPercentage: 8 },
+    'Vizag Fishing Harbour': { price: 188, trend: 'down', trendPercentage: 18 },
+    'Mangalore Old Port': { price: 245, trend: 'up', trendPercentage: 7 },
+    'Sassoon Dock': { price: 268, trend: 'up', trendPercentage: 17 },
+    'Chennai Kasimedu': { price: 198, trend: 'down', trendPercentage: 14 },
+  },
+  'Sardine': {
+    'Kochi Harbour': { price: 141, trend: 'up', trendPercentage: 5 },
+    'Vizag Fishing Harbour': { price: 118, trend: 'down', trendPercentage: 16 },
+    'Mangalore Old Port': { price: 155, trend: 'up', trendPercentage: 10 },
+    'Sassoon Dock': { price: 168, trend: 'up', trendPercentage: 19 },
+    'Chennai Kasimedu': { price: 125, trend: 'down', trendPercentage: 11 },
+  },
+  'Anchovies': {
+    'Kochi Harbour': { price: 120, trend: 'up', trendPercentage: 3 },
+    'Vizag Fishing Harbour': { price: 95, trend: 'down', trendPercentage: 21 },
+    'Mangalore Old Port': { price: 132, trend: 'up', trendPercentage: 10 },
+    'Sassoon Dock': { price: 145, trend: 'up', trendPercentage: 21 },
+    'Chennai Kasimedu': { price: 108, trend: 'down', trendPercentage: 10 },
+  },
+  'King Fish': {
+    'Kochi Harbour': { price: 520, trend: 'down', trendPercentage: 3 },
+    'Vizag Fishing Harbour': { price: 485, trend: 'down', trendPercentage: 7 },
+    'Mangalore Old Port': { price: 548, trend: 'up', trendPercentage: 5 },
+    'Sassoon Dock': { price: 595, trend: 'up', trendPercentage: 14 },
+    'Chennai Kasimedu': { price: 498, trend: 'down', trendPercentage: 4 },
+  },
+};
+
+// Generate harbour-specific data
+const generateHarbourData = (harbour: string): SpeciesData[] => {
+  return ALL_SPECIES.map((species, idx) => {
+    const crossData = CROSS_HARBOUR_PRICES[species.name]?.[harbour];
+    return {
+      id: `${harbour.substring(0, 2).toLowerCase()}${idx + 1}`,
+      name: species.name,
+      scientificName: species.scientificName,
+      price: crossData?.price || 200,
+      trend: crossData?.trend || 'up',
+      trendPercentage: crossData?.trendPercentage || 5,
+      imageUrl: species.imageUrl,
+      trustScore: 85 + Math.floor(Math.random() * 10),
+    };
+  });
 };
 
 export default function Dashboard() {
@@ -124,12 +146,16 @@ export default function Dashboard() {
   const [selectedFish, setSelectedFish] = useState<SpeciesData | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [dataKey, setDataKey] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
 
   const cart = useCart();
 
+  // Get species data for current harbour
+  const currentSpecies = useMemo(() => generateHarbourData(selectedHarbour), [selectedHarbour]);
+
   // Ticker animation
   const tickerAnim = useRef(new Animated.Value(0)).current;
-  const currentSpecies = HARBOUR_SPECIES[selectedHarbour] || [];
   const TICKER_WIDTH = currentSpecies.length * 170;
 
   useEffect(() => {
@@ -159,7 +185,7 @@ export default function Dashboard() {
 
   const handleAddToCart = (fish: SpeciesData) => {
     cart.addItem({
-      id: fish.id,
+      id: `${fish.id}-${Date.now()}`,
       name: fish.name,
       scientificName: fish.scientificName,
       price: fish.price,
@@ -170,19 +196,33 @@ export default function Dashboard() {
     });
   };
 
+  // Search with debounce effect
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (text.length > 1) {
+      setIsSearching(true);
+      // Simulate loading for real-time feel
+      setTimeout(() => setIsSearching(false), 300);
+    } else {
+      setIsSearching(false);
+    }
+  };
+
   const filteredData = currentSpecies.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.scientificName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Check if search matches a fish for cross-harbour view
-  const searchedFish = searchQuery.length > 2
-    ? Object.keys(CROSS_HARBOUR_PRICES).find(f =>
+  // Find matching fish for cross-harbour view
+  const searchedFish = useMemo(() => {
+    if (searchQuery.length < 2) return null;
+    return Object.keys(CROSS_HARBOUR_PRICES).find(f =>
       f.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    : null;
+    );
+  }, [searchQuery]);
 
   const crossHarbourData = searchedFish ? CROSS_HARBOUR_PRICES[searchedFish] : null;
+  const fishInfo = searchedFish ? ALL_SPECIES.find(s => s.name === searchedFish) : null;
 
   const renderTickerItem = (item: SpeciesData, index: number) => (
     <View key={index} style={styles.tickerItem}>
@@ -281,13 +321,21 @@ export default function Dashboard() {
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={18} color="#94a3b8" />
         <TextInput
+          ref={searchInputRef}
           placeholder="Search species..."
           placeholderTextColor="#64748b"
           style={styles.searchInput}
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={handleSearchChange}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          blurOnSubmit={false}
         />
-        {searchQuery ? (
+        {isSearching && (
+          <ActivityIndicator size="small" color="#3b82f6" />
+        )}
+        {searchQuery && !isSearching ? (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
             <Ionicons name="close-circle" size={18} color="#64748b" />
           </TouchableOpacity>
@@ -295,7 +343,7 @@ export default function Dashboard() {
       </View>
 
       {/* Cross-Harbour Price Card (appears on search) */}
-      {crossHarbourData && (
+      {crossHarbourData && !isSearching && (
         <MotiView
           from={{ opacity: 0, translateY: -10 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -308,12 +356,18 @@ export default function Dashboard() {
           <View style={styles.crossHarbourFishRow}>
             <FontAwesome5 name="fish" size={14} color="#3b82f6" />
             <Text style={styles.crossHarbourFishName}>{searchedFish}</Text>
+            {fishInfo && (
+              <Text style={styles.crossHarbourFishSub}>({fishInfo.scientificName})</Text>
+            )}
           </View>
           <View style={styles.crossHarbourGrid}>
             {Object.entries(crossHarbourData).map(([harbour, data]) => (
               <TouchableOpacity
                 key={harbour}
-                style={styles.harbourPriceCard}
+                style={[
+                  styles.harbourPriceCard,
+                  harbour === selectedHarbour && styles.harbourPriceCardActive,
+                ]}
                 onPress={() => handleHarbourChange(harbour)}
                 activeOpacity={0.8}
               >
@@ -346,9 +400,12 @@ export default function Dashboard() {
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <FlatList
-          key={dataKey}
           data={filteredData}
           keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="none"
+          removeClippedSubviews={false}
+          extraData={dataKey}
           renderItem={({ item, index }) => (
             <MotiView
               from={{ opacity: 0, translateX: -20 }}
@@ -369,6 +426,7 @@ export default function Dashboard() {
                   imageUrl={item.imageUrl}
                   trustScore={item.trustScore}
                   onAddToCart={() => handleAddToCart(item)}
+                  isInCart={cart.items.some(i => i.name === item.name && i.harbour === selectedHarbour)}
                 />
               </TouchableOpacity>
             </MotiView>
@@ -560,6 +618,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Outfit_700Bold',
   },
+  crossHarbourFishSub: {
+    color: '#64748b',
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
+  },
   crossHarbourGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -572,6 +635,10 @@ const styles = StyleSheet.create({
     width: '48%',
     borderWidth: 1,
     borderColor: '#334155',
+  },
+  harbourPriceCardActive: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#1e3a5f',
   },
   harbourPriceName: {
     color: '#94a3b8',

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useRef, useState } from 'react';
 
 interface SpeciesCardProps {
     id: string;
@@ -13,6 +14,7 @@ interface SpeciesCardProps {
     imageUrl: string;
     trustScore?: number;
     onAddToCart?: () => void;
+    isInCart?: boolean;
 }
 
 export default function SpeciesCard({
@@ -24,10 +26,38 @@ export default function SpeciesCard({
     imageUrl,
     trustScore,
     onAddToCart,
+    isInCart = false,
 }: SpeciesCardProps) {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const [showAdded, setShowAdded] = useState(false);
+
     const handleAddToCart = (e: any) => {
         e.stopPropagation();
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        // Animate button
+        Animated.sequence([
+            Animated.timing(scaleAnim, {
+                toValue: 0.8,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1.2,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+        ]).start();
+
+        // Show "Added!" feedback
+        setShowAdded(true);
+        setTimeout(() => setShowAdded(false), 1500);
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onAddToCart?.();
     };
 
@@ -79,21 +109,40 @@ export default function SpeciesCard({
                     {trustScore && (
                         <View style={styles.trustPill}>
                             <Ionicons name="shield-checkmark" size={11} color="#22c55e" />
-                            <Text style={styles.trustText}>{trustScore}% Trust</Text>
+                            <Text style={styles.trustText}>{trustScore}%</Text>
                         </View>
                     )}
 
                     {/* Spacer */}
                     <View style={{ flex: 1 }} />
 
-                    {/* Add Button */}
-                    <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={handleAddToCart}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="add" size={20} color="white" />
-                    </TouchableOpacity>
+                    {/* Add Button with Animation */}
+                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                        <TouchableOpacity
+                            style={[
+                                styles.addButton,
+                                showAdded && styles.addButtonAdded,
+                                isInCart && styles.addButtonInCart,
+                            ]}
+                            onPress={handleAddToCart}
+                            activeOpacity={0.7}
+                        >
+                            {showAdded ? (
+                                <Ionicons name="checkmark" size={18} color="white" />
+                            ) : isInCart ? (
+                                <Ionicons name="heart" size={18} color="#ef4444" />
+                            ) : (
+                                <Ionicons name="add" size={20} color="white" />
+                            )}
+                        </TouchableOpacity>
+                    </Animated.View>
+
+                    {/* Added feedback text */}
+                    {showAdded && (
+                        <View style={styles.addedBadge}>
+                            <Text style={styles.addedText}>Added!</Text>
+                        </View>
+                    )}
                 </View>
             </View>
         </View>
@@ -198,5 +247,26 @@ const styles = StyleSheet.create({
         backgroundColor: '#334155',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    addButtonAdded: {
+        backgroundColor: '#22c55e',
+    },
+    addButtonInCart: {
+        backgroundColor: '#1e293b',
+        borderWidth: 1,
+        borderColor: '#ef4444',
+    },
+    addedBadge: {
+        position: 'absolute',
+        right: 44,
+        backgroundColor: '#22c55e',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    addedText: {
+        color: 'white',
+        fontSize: 10,
+        fontFamily: 'Outfit_700Bold',
     },
 });

@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+
+import FishAvatar from './FishAvatar';
 
 interface AppHeaderProps {
     showSettings?: boolean;
@@ -14,6 +16,9 @@ export default function AppHeader({ showSettings = true }: AppHeaderProps) {
         router.push('/(tabs)/settings');
     };
 
+    // Generate a consistent avatar based on time (changes daily)
+    const avatarSeed = `user-${new Date().toDateString()}`;
+
     return (
         <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -24,9 +29,7 @@ export default function AppHeader({ showSettings = true }: AppHeaderProps) {
             {showSettings && (
                 <TouchableOpacity style={styles.settingsBtn} onPress={handleSettingsPress}>
                     <Text style={styles.settingsBtnText}>Settings</Text>
-                    <View style={styles.avatarContainer}>
-                        <Ionicons name="person" size={16} color="#3b82f6" />
-                    </View>
+                    <FishAvatar seed={avatarSeed} size={32} />
                 </TouchableOpacity>
             )}
         </View>
@@ -38,7 +41,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     headerLeft: {
         flexDirection: 'row',
@@ -73,15 +76,5 @@ const styles = StyleSheet.create({
         color: '#94a3b8',
         fontSize: 13,
         fontFamily: 'Outfit_500Medium',
-    },
-    avatarContainer: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#0f172a',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#334155',
     },
 });

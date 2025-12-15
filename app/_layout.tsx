@@ -3,7 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { LogBox } from 'react-native';
+import { LogBox, Platform } from 'react-native';
 import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -77,11 +77,42 @@ export default function RootLayout() {
           headerTitleStyle: {
             fontFamily: 'Outfit_700Bold',
           },
+          // Disable iOS swipe back gesture on main screens to prevent accidental logout
+          gestureEnabled: false,
         }}>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
-          <Stack.Screen name="signup" options={{ headerShown: false, animation: 'slide_from_right' }} />
+          <Stack.Screen
+            name="index"
+            options={{
+              headerShown: false,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              // CRITICAL: Disable swipe back on tabs to prevent logout
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="login"
+            options={{
+              headerShown: false,
+              animation: 'fade',
+              // Allow back gesture on login
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="signup"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              // Allow back gesture on signup
+              gestureEnabled: true,
+            }}
+          />
         </Stack>
       </ThemeProvider>
     </CartProvider>

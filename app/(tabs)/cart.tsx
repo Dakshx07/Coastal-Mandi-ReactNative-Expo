@@ -8,6 +8,8 @@ import {
     Image,
     Alert,
     Linking,
+    Share,
+    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
@@ -40,7 +42,7 @@ export default function CartScreen() {
         );
     };
 
-    const sendWhatsApp = () => {
+    const shareWatchlist = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
         if (items.length === 0) {
@@ -50,18 +52,17 @@ export default function CartScreen() {
 
         const message = `🐟 *Coastal Mandi Watchlist*\n\n${items.map(item =>
             `• ${item.name} - ₹${item.price}/kg (${item.harbour})`
-        ).join('\n')}\n\n📅 ${new Date().toLocaleDateString()}`;
+        ).join('\n')}\n\n📅 ${new Date().toLocaleDateString()}\n\n🌊 Get live fish prices at Coastal Mandi`;
 
-        const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
-
-        Linking.canOpenURL(whatsappUrl)
-            .then((supported) => {
-                if (supported) {
-                    Linking.openURL(whatsappUrl);
-                } else {
-                    Alert.alert('WhatsApp not installed', 'Please install WhatsApp to share.');
-                }
+        try {
+            // Use Share API which works reliably on iOS
+            await Share.share({
+                message: message,
+                title: 'Coastal Mandi Watchlist',
             });
+        } catch (error) {
+            console.error('Share error:', error);
+        }
     };
 
     const navigateToRates = () => {
@@ -138,14 +139,14 @@ export default function CartScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* WhatsApp Button */}
+                            {/* Share Button - Uses native Share API */}
                             <TouchableOpacity
-                                style={styles.whatsappBtn}
+                                style={styles.shareBtn}
                                 activeOpacity={0.8}
-                                onPress={sendWhatsApp}
+                                onPress={shareWatchlist}
                             >
-                                <FontAwesome5 name="whatsapp" size={18} color="white" />
-                                <Text style={styles.whatsappText}>Share via WhatsApp</Text>
+                                <Ionicons name="share-outline" size={18} color="white" />
+                                <Text style={styles.shareBtnText}>Share Watchlist</Text>
                             </TouchableOpacity>
 
                             <FlatList
@@ -234,8 +235,8 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: 'Outfit_500Medium',
     },
-    whatsappBtn: {
-        backgroundColor: '#22c55e',
+    shareBtn: {
+        backgroundColor: '#3b82f6',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginBottom: 16,
     },
-    whatsappText: {
+    shareBtnText: {
         color: 'white',
         fontSize: 15,
         fontFamily: 'Outfit_700Bold',

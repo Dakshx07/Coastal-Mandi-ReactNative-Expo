@@ -74,7 +74,12 @@ export default function FishDetailModal({ visible, species, onClose, onAddToCart
         if (!species) return;
         setLoadingForecast(true);
         try {
-            const prediction = await getMarketPrediction(species.name);
+            const prediction = await getMarketPrediction(
+                species.name,
+                species.price,
+                species.trend,
+                species.trendPercentage
+            );
             setForecast(prediction);
         } catch (error) {
             setForecast(`Based on current trends, ${species.name} prices are expected to ${species.trend === 'down' ? 'continue declining' : 'rise'} over the next week.`);
