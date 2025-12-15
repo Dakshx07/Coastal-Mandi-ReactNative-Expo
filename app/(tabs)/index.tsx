@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Animated, Dimensions, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+  Keyboard,
+  TouchableWithoutFeedback,
+  ActivityIndicator
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { MotiView } from 'moti';
@@ -11,6 +22,8 @@ import AppHeader from '@/components/AppHeader';
 import SpeciesCard from '@/components/SpeciesCard';
 import HarbourSelector from '@/components/HarbourSelector';
 import FishDetailModal from '@/components/FishDetailModal';
+import WeatherHeader from '@/components/WeatherHeader';
+import WhatsAppModal from '@/components/WhatsAppModal';
 import { useCart } from '@/contexts/CartContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -47,6 +60,9 @@ const ALL_SPECIES = [
   { name: 'Sardine', scientificName: 'Mathi / Chaala', imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200' },
   { name: 'Anchovies', scientificName: 'Netholi / Kozhuva', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
   { name: 'King Fish', scientificName: 'Ney Meen', imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200' },
+  // Additional species to ensure list is scrollable
+  { name: 'Katla', scientificName: 'Katla', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
+  { name: 'Rohu', scientificName: 'Rohu', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
 ];
 
 // Cross-harbour prices for ALL fish
@@ -142,11 +158,11 @@ const generateHarbourData = (harbour: string): SpeciesData[] => {
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedHarbour, setSelectedHarbour] = useState('Kochi Harbour');
   const [selectedFish, setSelectedFish] = useState<SpeciesData | null>(null);
   const [showDetail, setShowDetail] = useState(false);
-  const [dataKey, setDataKey] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
 
   const cart = useCart();
@@ -167,14 +183,14 @@ export default function Dashboard() {
         useNativeDriver: true,
       })
     ).start();
-  }, [selectedHarbour]);
+  }, [selectedHarbour, currentSpecies.length]);
 
   const weather = WEATHER_DATA[selectedHarbour] || WEATHER_DATA['Kochi Harbour'];
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
   const handleHarbourChange = (harbour: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedHarbour(harbour);
-    setDataKey(prev => prev + 1);
   };
 
   const handleFishPress = (fish: SpeciesData) => {
@@ -185,7 +201,6 @@ export default function Dashboard() {
 
   const handleAddToCart = (fish: SpeciesData) => {
     cart.addItem({
-      id: `${fish.id}-${Date.now()}`,
       name: fish.name,
       scientificName: fish.scientificName,
       price: fish.price,
@@ -196,18 +211,7 @@ export default function Dashboard() {
     });
   };
 
-  // Search with debounce effect
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-    if (text.length > 1) {
-      setIsSearching(true);
-      // Simulate loading for real-time feel
-      setTimeout(() => setIsSearching(false), 300);
-    } else {
-      setIsSearching(false);
-    }
-  };
-
+  // Simple search without debounce to prevent keyboard issues
   const filteredData = currentSpecies.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.scientificName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -224,227 +228,153 @@ export default function Dashboard() {
   const crossHarbourData = searchedFish ? CROSS_HARBOUR_PRICES[searchedFish] : null;
   const fishInfo = searchedFish ? ALL_SPECIES.find(s => s.name === searchedFish) : null;
 
-  const renderTickerItem = (item: SpeciesData, index: number) => (
-    <View key={index} style={styles.tickerItem}>
-      <Text style={styles.tickerName}>{item.name}</Text>
-      <Text style={styles.tickerPrice}>₹{item.price}</Text>
-      <View style={[
-        styles.tickerBadge,
-        { backgroundColor: item.trend === 'down' ? '#450a0a' : '#052e16' }
-      ]}>
-        <Ionicons
-          name={item.trend === 'down' ? "caret-down" : "caret-up"}
-          size={10}
-          color={item.trend === 'down' ? '#ef4444' : '#22c55e'}
-        />
-        <Text style={[
-          styles.tickerPercent,
-          { color: item.trend === 'down' ? '#ef4444' : '#22c55e' }
-        ]}>
-          {item.trendPercentage.toFixed(1)}%
-        </Text>
-      </View>
-    </View>
-  );
-
-  const renderHeader = () => (
-    <View style={styles.headerContent}>
-      {/* App Header */}
-      <AppHeader />
-
-      {/* Animated Price Ticker */}
-      <View style={styles.tickerContainer}>
-        <Animated.View
-          style={[
-            styles.tickerScroll,
-            { transform: [{ translateX: tickerAnim }] }
-          ]}
-        >
-          {currentSpecies.map((item, i) => renderTickerItem(item, i))}
-          {currentSpecies.map((item, i) => renderTickerItem(item, i + currentSpecies.length))}
-        </Animated.View>
-      </View>
-
-      {/* Harbour Selector */}
-      <HarbourSelector
-        selectedHarbour={selectedHarbour}
-        onSelect={handleHarbourChange}
-      />
-
-      {/* Weather Card - Animated on harbour change */}
-      <MotiView
-        key={`weather-${dataKey}`}
-        from={{ opacity: 0.6, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'timing', duration: 300 }}
-      >
-        <LinearGradient
-          colors={['#3b82f6', '#06b6d4']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.weatherCard}
-        >
-          <View style={styles.weatherMain}>
-            <View style={styles.weatherLeft}>
-              <View style={styles.weatherLocRow}>
-                <Ionicons name="navigate" size={10} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.weatherLoc} numberOfLines={1}>
-                  {selectedHarbour.replace(' Harbour', '').replace(' Fishing', '').toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.tempRow}>
-                <Text style={styles.temp}>{weather.temp}°</Text>
-                <View style={styles.weatherDetails}>
-                  <Text style={styles.weatherCondition}>{weather.condition}</Text>
-                  <View style={styles.windPill}>
-                    <FontAwesome5 name="wind" size={8} color="white" />
-                    <Text style={styles.windText}>{weather.wind} km/h</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-            <View style={styles.weatherIconCol}>
-              <Ionicons
-                name={weather.condition === 'Sunny' ? 'sunny' :
-                  weather.condition === 'Cloudy' ? 'cloudy' :
-                    'partly-sunny'}
-                size={40}
-                color="white"
-              />
-              <Text style={styles.humidityText}>{weather.humidity}% Humidity</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </MotiView>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={18} color="#94a3b8" />
-        <TextInput
-          ref={searchInputRef}
-          placeholder="Search species..."
-          placeholderTextColor="#64748b"
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-          autoCorrect={false}
-          autoCapitalize="none"
-          returnKeyType="search"
-          blurOnSubmit={false}
-        />
-        {isSearching && (
-          <ActivityIndicator size="small" color="#3b82f6" />
-        )}
-        {searchQuery && !isSearching ? (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color="#64748b" />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      {/* Cross-Harbour Price Card (appears on search) */}
-      {crossHarbourData && !isSearching && (
-        <MotiView
-          from={{ opacity: 0, translateY: -10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          style={styles.crossHarbourCard}
-        >
-          <View style={styles.crossHarbourHeader}>
-            <Ionicons name="location" size={16} color="#a78bfa" />
-            <Text style={styles.crossHarbourTitle}>PRICES ACROSS ALL HARBOURS</Text>
-          </View>
-          <View style={styles.crossHarbourFishRow}>
-            <FontAwesome5 name="fish" size={14} color="#3b82f6" />
-            <Text style={styles.crossHarbourFishName}>{searchedFish}</Text>
-            {fishInfo && (
-              <Text style={styles.crossHarbourFishSub}>({fishInfo.scientificName})</Text>
-            )}
-          </View>
-          <View style={styles.crossHarbourGrid}>
-            {Object.entries(crossHarbourData).map(([harbour, data]) => (
-              <TouchableOpacity
-                key={harbour}
-                style={[
-                  styles.harbourPriceCard,
-                  harbour === selectedHarbour && styles.harbourPriceCardActive,
-                ]}
-                onPress={() => handleHarbourChange(harbour)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.harbourPriceName} numberOfLines={1}>
-                  {harbour.split(' ')[0].toUpperCase()}
-                </Text>
-                <Text style={styles.harbourPriceValue}>₹{data.price}</Text>
-                <Text style={[
-                  styles.harbourPriceTrend,
-                  { color: data.trend === 'down' ? '#ef4444' : '#22c55e' }
-                ]}>
-                  {data.trend === 'down' ? '↓' : '↑'} {data.trendPercentage}%
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </MotiView>
-      )}
-
-      {/* List Title */}
-      <View style={styles.listHeader}>
-        <Text style={styles.sectionTitle}>TODAY'S RATES</Text>
-        <Text style={styles.itemCount}>{filteredData.length} species</Text>
-      </View>
-    </View>
-  );
-
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <FlatList
-          data={filteredData}
-          keyExtractor={(item) => item.id}
-          keyboardShouldPersistTaps="always"
-          keyboardDismissMode="none"
-          removeClippedSubviews={false}
-          extraData={dataKey}
-          renderItem={({ item, index }) => (
-            <MotiView
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ delay: index * 30 }}
-            >
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => handleFishPress(item)}
-              >
-                <SpeciesCard
-                  id={item.id}
-                  name={item.name}
-                  scientificName={item.scientificName}
-                  price={item.price}
-                  trend={item.trend}
-                  trendPercentage={item.trendPercentage}
-                  imageUrl={item.imageUrl}
-                  trustScore={item.trustScore}
-                  onAddToCart={() => handleAddToCart(item)}
-                  isInCart={cart.items.some(i => i.name === item.name && i.harbour === selectedHarbour)}
-                />
-              </TouchableOpacity>
-            </MotiView>
-          )}
-          contentContainerStyle={styles.listContent}
-          ListHeaderComponent={renderHeader}
-          showsVerticalScrollIndicator={false}
-        />
-      </SafeAreaView>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+          {/* Fixed Header Section (AppHeader & Selector) */}
+          <View style={styles.fixedHeader}>
+            <AppHeader />
+            <View style={styles.topControls}>
+              <HarbourSelector selectedHarbour={selectedHarbour} onSelect={handleHarbourChange} />
+            </View>
+          </View>
 
-      {/* Fish Detail Modal */}
-      <FishDetailModal
-        visible={showDetail}
-        species={selectedFish}
-        onClose={() => setShowDetail(false)}
-        onAddToCart={handleAddToCart}
-      />
-    </View>
+          <FlatList
+            data={filteredData}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            removeClippedSubviews={false}
+            renderItem={({ item, index }) => (
+              <MotiView
+                from={{ opacity: 0, translateX: -20 }}
+                animate={{ opacity: 1, translateX: 0 }}
+                transition={{ delay: index * 30 }}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleFishPress(item)}
+                >
+                  <SpeciesCard
+                    id={item.id}
+                    name={item.name}
+                    scientificName={item.scientificName}
+                    price={item.price}
+                    trend={item.trend}
+                    trendPercentage={item.trendPercentage}
+                    imageUrl={item.imageUrl}
+                    trustScore={item.trustScore}
+                    onAddToCart={() => handleAddToCart(item)}
+                    isInCart={cart.items.some(i => i.name === item.name && i.harbour === selectedHarbour)}
+                  />
+                </TouchableOpacity>
+              </MotiView>
+            )}
+            contentContainerStyle={styles.listContent}
+            ListHeaderComponent={
+              <View>
+                {/* Weather Header Moved Here */}
+                <WeatherHeader
+                  harbour={selectedHarbour}
+                  weather={weather}
+                  today={today}
+                  speciesCount={filteredData.length}
+                />
+
+                {/* Search Bar Moved Below Weather */}
+                <View style={styles.searchContainer}>
+                  <Ionicons name="search" size={18} color="#94a3b8" />
+                  <TextInput
+                    ref={searchInputRef}
+                    placeholder="Search species..."
+                    placeholderTextColor="#64748b"
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={(text) => {
+                      setSearchQuery(text);
+                      setIsSearching(true);
+                      setTimeout(() => setIsSearching(false), 500); // Fake loader
+                    }}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    returnKeyType="search"
+                    blurOnSubmit={false}
+                    selectionColor="#3b82f6"
+                  />
+                  {isSearching ? (
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                  ) : searchQuery.length > 0 ? (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color="#64748b" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+
+                {/* Cross Harbour Card (only when searching) */}
+                {crossHarbourData && (
+                  <MotiView
+                    from={{ opacity: 0, translateY: -10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    style={styles.crossHarbourCard}
+                  >
+                    {/* ... (Cross Harbour Content) ... */}
+                    <View style={styles.crossHarbourHeader}>
+                      <Ionicons name="location" size={16} color="#a78bfa" />
+                      <Text style={styles.crossHarbourTitle}>PRICES ACROSS ALL HARBOURS</Text>
+                    </View>
+                    <View style={styles.crossHarbourFishRow}>
+                      <FontAwesome5 name="fish" size={14} color="#3b82f6" />
+                      <Text style={styles.crossHarbourFishName}>{searchedFish}</Text>
+                      {fishInfo && (
+                        <Text style={styles.crossHarbourFishSub}>({fishInfo.scientificName})</Text>
+                      )}
+                    </View>
+                    <View style={styles.crossHarbourGrid}>
+                      {Object.entries(crossHarbourData).map(([harbour, data]) => (
+                        <TouchableOpacity
+                          key={harbour}
+                          style={[
+                            styles.harbourPriceCard,
+                            harbour === selectedHarbour && styles.harbourPriceCardActive,
+                          ]}
+                          onPress={() => handleHarbourChange(harbour)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.harbourPriceName} numberOfLines={1}>
+                            {harbour.split(' ')[0].toUpperCase()}
+                          </Text>
+                          <Text style={styles.harbourPriceValue}>₹{data.price}</Text>
+                          <Text style={[
+                            styles.harbourPriceTrend,
+                            { color: data.trend === 'down' ? '#ef4444' : '#22c55e' }
+                          ]}>
+                            {data.trend === 'down' ? '↓' : '↑'} {data.trendPercentage}%
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </MotiView>
+                )}
+              </View>
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        </SafeAreaView>
+
+        {/* Fish Detail Modal */}
+        <FishDetailModal
+          visible={showDetail}
+          species={selectedFish}
+          onClose={() => setShowDetail(false)}
+          onAddToCart={handleAddToCart}
+        />
+
+        {/* WhatsApp Modal */}
+        <WhatsAppModal visible={showWhatsApp} onClose={() => setShowWhatsApp(false)} />
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -460,114 +390,16 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100,
   },
-  headerContent: {
+  fixedHeader: {
+    paddingBottom: 8,
+    backgroundColor: '#0b0f19',
+    zIndex: 10,
+  },
+  topControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     marginBottom: 12,
-  },
-  tickerContainer: {
-    height: 30,
-    marginHorizontal: -16,
-    marginBottom: 12,
-    overflow: 'hidden',
-    backgroundColor: '#0f172a',
-  },
-  tickerScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 30,
-  },
-  tickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 20,
-    gap: 5,
-  },
-  tickerName: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
-  },
-  tickerPrice: {
-    color: 'white',
-    fontSize: 12,
-    fontFamily: 'Outfit_700Bold',
-  },
-  tickerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-    gap: 2,
-  },
-  tickerPercent: {
-    fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
-  },
-  weatherCard: {
-    borderRadius: 14,
-    padding: 12,
-    marginVertical: 10,
-  },
-  weatherMain: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  weatherLeft: {
-    flex: 1,
-  },
-  weatherLocRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  weatherLoc: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 9,
-    letterSpacing: 1,
-    fontFamily: 'Outfit_500Medium',
-  },
-  tempRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  temp: {
-    color: 'white',
-    fontSize: 32,
-    fontFamily: 'Outfit_700Bold',
-  },
-  weatherDetails: {
-    gap: 3,
-  },
-  weatherCondition: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
-    fontFamily: 'Outfit_500Medium',
-  },
-  windPill: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignItems: 'center',
-    gap: 3,
-  },
-  windText: {
-    color: 'white',
-    fontSize: 9,
-    fontFamily: 'Outfit_500Medium',
-  },
-  weatherIconCol: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  humidityText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 9,
-    fontFamily: 'Outfit_500Medium',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -579,6 +411,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#334155',
+    marginHorizontal: 16,
   },
   searchInput: {
     flex: 1,
@@ -594,6 +427,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#334155',
+    marginHorizontal: 16,
   },
   crossHarbourHeader: {
     flexDirection: 'row',
@@ -617,6 +451,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontFamily: 'Outfit_700Bold',
+    marginBottom: 2,
   },
   crossHarbourFishSub: {
     color: '#64748b',
@@ -628,6 +463,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  subscribeBtn: {
+    backgroundColor: '#22c55e',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  subscribeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   harbourPriceCard: {
     backgroundColor: '#0f172a',
     borderRadius: 10,
@@ -635,6 +485,7 @@ const styles = StyleSheet.create({
     width: '48%',
     borderWidth: 1,
     borderColor: '#334155',
+    marginBottom: 8,
   },
   harbourPriceCardActive: {
     borderColor: '#3b82f6',
@@ -655,22 +506,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Outfit_600SemiBold',
     marginTop: 2,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    color: '#94a3b8',
-    fontSize: 10,
-    letterSpacing: 1,
-    fontFamily: 'Outfit_700Bold',
-  },
-  itemCount: {
-    color: '#64748b',
-    fontSize: 11,
-    fontFamily: 'Outfit_400Regular',
   },
 });

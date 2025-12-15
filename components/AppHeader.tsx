@@ -4,20 +4,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-import FishAvatar from './FishAvatar';
+import PersonAvatar from './PersonAvatar';
+
+import { useUser } from '@/contexts/UserContext';
 
 interface AppHeaderProps {
     showSettings?: boolean;
 }
 
 export default function AppHeader({ showSettings = true }: AppHeaderProps) {
+    const { user } = useUser();
+
     const handleSettingsPress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push('/(tabs)/settings');
     };
 
-    // Generate a consistent avatar based on time (changes daily)
-    const avatarSeed = `user-${new Date().toDateString()}`;
+    // Generate a consistent avatar based on email (or date fallback)
+    const avatarSeed = user.email || `user-${new Date().toDateString()}`;
 
     return (
         <View style={styles.header}>
@@ -29,7 +33,7 @@ export default function AppHeader({ showSettings = true }: AppHeaderProps) {
             {showSettings && (
                 <TouchableOpacity style={styles.settingsBtn} onPress={handleSettingsPress}>
                     <Text style={styles.settingsBtnText}>Settings</Text>
-                    <FishAvatar seed={avatarSeed} size={32} />
+                    <PersonAvatar seed={avatarSeed} size={32} />
                 </TouchableOpacity>
             )}
         </View>

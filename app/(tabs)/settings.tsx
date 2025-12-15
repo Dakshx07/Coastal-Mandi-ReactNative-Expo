@@ -6,13 +6,70 @@ import {
     TouchableOpacity,
     ScrollView,
     Switch,
-    Alert,
-    Image,
+    Linking,
+    Modal,
+    Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { MotiView } from 'moti';
+
+import PersonAvatar from '@/components/PersonAvatar';
+import AnimatedBackButton from '@/components/AnimatedBackButton';
+import { useCart } from '@/contexts/CartContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useUser } from '@/contexts/UserContext';
+
+interface CustomModalProps {
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[];
+    onClose: () => void;
+}
+
+function CustomModal({ visible, title, message, buttons, onClose }: CustomModalProps) {
+    const { colors, isDark } = useTheme();
+
+    return (
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+            <Pressable style={styles.modalOverlay} onPress={onClose}>
+                <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                    <Text style={[styles.modalTitle, { color: colors.text }]}>{title}</Text>
+                    <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>{message}</Text>
+                    <View style={styles.modalButtons}>
+                        {buttons.map((btn, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[
+                                    styles.modalButton,
+                                    { backgroundColor: colors.surfaceLight },
+                                    btn.style === 'destructive' && { backgroundColor: '#7f1d1d' },
+                                    btn.style === 'cancel' && { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+                                ]}
+                                onPress={() => {
+                                    onClose();
+                                    btn.onPress?.();
+                                }}
+                            >
+                                <Text style={[
+                                    styles.modalButtonText,
+                                    { color: colors.text },
+                                    btn.style === 'destructive' && { color: '#ef4444' },
+                                    btn.style === 'cancel' && { color: colors.textSecondary },
+                                ]}>
+                                    {btn.text}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </Pressable>
+            </Pressable>
+        </Modal>
+    );
+}
 
 interface SettingItem {
     icon: string;
@@ -23,110 +80,215 @@ interface SettingItem {
     value?: boolean | string;
     onPress?: () => void;
     onToggle?: (value: boolean) => void;
+    iconColor?: string;
 }
 
+import SubscriptionModal from '@/components/SubscriptionModal';
+
 export default function SettingsScreen() {
+    const { colors, isDark, toggleTheme } = useTheme();
+    const { user, logout: userLogout } = useUser();
     const [notifications, setNotifications] = useState(true);
-    const [darkMode, setDarkMode] = useState(true);
+    const [priceAlerts, setPriceAlerts] = useState(true);
     const [language, setLanguage] = useState('English');
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
+    const { clearCart, items } = useCart();
+
+    // Modal states
+    const [modal, setModal] = useState<{ visible: boolean; title: string; message: string; buttons: any[] }>({
+        visible: false,
+        title: '',
+        message: '',
+        buttons: [],
+    });
+
+    const avatarSeed = `user-${new Date().toDateString()}`;
+
+    const showModal = (title: string, message: string, buttons: any[]) => {
+        setModal({ visible: true, title, message, buttons });
+    };
+
+    const handleBack = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.back();
+    };
 
     const handleLogout = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        Alert.alert(
-            'Logout',
-            'Are you sure you want to logout?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Logout',
-                    style: 'destructive',
-                    onPress: () => router.replace('/login')
+        showModal('Logout', 'Are you sure you want to logout?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Logout',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await userLogout(); // Clears storage and state
+                    } catch (e) {
+                        console.error('Logout error caught in UI', e);
+                    } finally {
+                        clearCart();
+                        // Force navigation to root and reset stack
+                        if (router.canGoBack()) {
+                            router.dismissAll();
+                        }
+                        router.replace('/');
+                    }
                 },
-            ]
+            },
+        ]);
+    };
+
+    const handleClearWatchlist = () => {
+        if (items.length === 0) {
+            showModal('Watchlist Empty', 'You have no items in your watchlist.', [
+                { text: 'OK' },
+            ]);
+            return;
+        }
+        showModal('Clear Watchlist', `Remove all ${items.length} items from your watchlist?`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Clear All',
+                style: 'destructive',
+                onPress: () => {
+                    clearCart();
+                    showModal('Done', 'Watchlist cleared!', [{ text: 'OK' }]);
+                },
+            },
+        ]);
+    };
+
+    const handleLanguageChange = () => {
+        showModal('Select Language', 'Choose your preferred language', [
+            { text: 'English', onPress: () => setLanguage('English') },
+            { text: 'हिन्दी (Hindi)', onPress: () => setLanguage('Hindi') },
+            { text: 'മലയാളം (Malayalam)', onPress: () => setLanguage('Malayalam') },
+            { text: 'Cancel', style: 'cancel' },
+        ]);
+    };
+
+    const handleContactSupport = () => {
+        showModal('Contact Support', 'How would you like to reach us?', [
+            { text: 'Email', onPress: () => Linking.openURL('mailto:support@coastalmandi.in') },
+            { text: 'WhatsApp', onPress: () => Linking.openURL('https://wa.me/919876543210?text=Hi%20Coastal%20Mandi%20Support') },
+            { text: 'Cancel', style: 'cancel' },
+        ]);
+    };
+
+    const handleRateApp = () => {
+        showModal('Rate Coastal Mandi ⭐', 'Your feedback helps us improve!', [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Rate 5 Stars', onPress: () => showModal('Thank You!', 'We appreciate your support!', [{ text: 'OK' }]) },
+        ]);
+    };
+
+    const handleHelpFaq = () => {
+        showModal(
+            'Help & FAQ',
+            '• How do I add fish to watchlist?\n   Tap the + button on any fish card\n\n• Where does the price data come from?\n   Direct from harbour traders, updated daily\n\n• How accurate is the AI analysis?\n   Based on historical trends and market patterns',
+            [{ text: 'Got it!' }]
         );
     };
 
     const settingsSections: { title: string; items: SettingItem[] }[] = [
         {
-            title: 'Preferences',
+            title: 'SUBSCRIPTION',
+            items: [
+                {
+                    icon: 'diamond',
+                    iconFamily: 'ionicons',
+                    title: 'Upgrade to Premium',
+                    subtitle: 'Real-time alerts & trends',
+                    type: 'arrow',
+                    onPress: () => setShowPremiumModal(true),
+                    iconColor: '#22c55e', // Green/Emerald
+                },
+            ],
+        },
+        {
+            title: 'NOTIFICATIONS',
             items: [
                 {
                     icon: 'notifications',
                     iconFamily: 'ionicons',
                     title: 'Push Notifications',
-                    subtitle: 'Price alerts and updates',
+                    subtitle: 'Daily price updates',
                     type: 'switch',
                     value: notifications,
                     onToggle: setNotifications,
+                    iconColor: '#3b82f6',
                 },
                 {
-                    icon: 'moon',
+                    icon: 'pulse',
                     iconFamily: 'ionicons',
-                    title: 'Dark Mode',
-                    subtitle: 'Always on',
+                    title: 'Price Alerts',
+                    subtitle: 'Get notified on big price changes',
                     type: 'switch',
-                    value: darkMode,
-                    onToggle: setDarkMode,
+                    value: priceAlerts,
+                    onToggle: setPriceAlerts,
+                    iconColor: '#22c55e',
                 },
+            ],
+        },
+        {
+            title: 'PREFERENCES',
+            items: [
                 {
                     icon: 'language',
                     iconFamily: 'ionicons',
                     title: 'Language',
                     type: 'label',
                     value: language,
-                    onPress: () => Alert.alert('Languages', 'English, Hindi, Malayalam, Kannada coming soon!'),
+                    onPress: handleLanguageChange,
+                    iconColor: '#eab308',
                 },
             ],
         },
         {
-            title: 'Data & Storage',
+            title: 'DATA',
             items: [
                 {
-                    icon: 'cloud-download',
+                    icon: 'heart',
                     iconFamily: 'ionicons',
-                    title: 'Offline Data',
-                    subtitle: 'Manage cached data',
+                    title: 'Clear Watchlist',
+                    subtitle: `${items.length} items saved`,
                     type: 'arrow',
-                    onPress: () => Alert.alert('Offline Data', 'Clear cache or download data for offline use.'),
-                },
-                {
-                    icon: 'server',
-                    iconFamily: 'fontawesome',
-                    title: 'Data Usage',
-                    subtitle: '12.4 MB used',
-                    type: 'arrow',
-                    onPress: () => { },
+                    onPress: handleClearWatchlist,
+                    iconColor: '#ef4444',
                 },
             ],
         },
         {
-            title: 'Support',
+            title: 'SUPPORT',
             items: [
                 {
                     icon: 'help-circle',
                     iconFamily: 'ionicons',
                     title: 'Help & FAQ',
                     type: 'arrow',
-                    onPress: () => { },
+                    onPress: handleHelpFaq,
+                    iconColor: '#3b82f6',
                 },
                 {
                     icon: 'chatbubble-ellipses',
                     iconFamily: 'ionicons',
                     title: 'Contact Support',
                     type: 'arrow',
-                    onPress: () => { },
+                    onPress: handleContactSupport,
+                    iconColor: '#22c55e',
                 },
                 {
                     icon: 'star',
                     iconFamily: 'ionicons',
                     title: 'Rate App',
                     type: 'arrow',
-                    onPress: () => { },
+                    onPress: handleRateApp,
+                    iconColor: '#eab308',
                 },
             ],
         },
         {
-            title: 'About',
+            title: 'ABOUT',
             items: [
                 {
                     icon: 'information-circle',
@@ -134,20 +296,7 @@ export default function SettingsScreen() {
                     title: 'App Version',
                     type: 'label',
                     value: '1.0.0',
-                },
-                {
-                    icon: 'document-text',
-                    iconFamily: 'ionicons',
-                    title: 'Terms of Service',
-                    type: 'arrow',
-                    onPress: () => { },
-                },
-                {
-                    icon: 'shield-checkmark',
-                    iconFamily: 'ionicons',
-                    title: 'Privacy Policy',
-                    type: 'arrow',
-                    onPress: () => { },
+                    iconColor: '#64748b',
                 },
             ],
         },
@@ -155,56 +304,75 @@ export default function SettingsScreen() {
 
     const renderIcon = (item: SettingItem) => {
         if (item.iconFamily === 'fontawesome') {
-            return <FontAwesome5 name={item.icon} size={18} color="#94a3b8" />;
+            return <FontAwesome5 name={item.icon} size={16} color={item.iconColor || colors.textSecondary} />;
         }
-        return <Ionicons name={item.icon as any} size={22} color="#94a3b8" />;
+        return <Ionicons name={item.icon as any} size={20} color={item.iconColor || colors.textSecondary} />;
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >
-                    {/* Profile Card */}
-                    <View style={styles.profileCard}>
-                        <Image
-                            source={{ uri: 'https://placehold.co/100x100/3b82f6/FFF?text=U' }}
-                            style={styles.avatar}
-                        />
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.profileName}>Fisherman User</Text>
-                            <Text style={styles.profileEmail}>user@coastal.app</Text>
-                        </View>
-                        <TouchableOpacity style={styles.editBtn}>
-                            <Ionicons name="pencil" size={18} color="#3b82f6" />
-                        </TouchableOpacity>
+                    {/* Header - No Back Button as per request */}
+                    <View style={styles.header}>
+                        <Text style={[styles.headerTitle, { color: colors.text, fontSize: 24 }]}>Settings</Text>
                     </View>
 
+                    {/* Profile Card - No Verified Badge */}
+                    <MotiView
+                        from={{ opacity: 0, translateY: 10 }}
+                        animate={{ opacity: 1, translateY: 0 }}
+                        style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    >
+                        <PersonAvatar seed={user.email || avatarSeed} size={64} />
+                        <View style={styles.profileInfo}>
+                            <Text style={[styles.profileName, { color: colors.text }]}>
+                                {user.name || 'Coastal User'}
+                            </Text>
+                            <Text style={[styles.profileEmail, { color: colors.textMuted }]}>
+                                {user.email || 'Not signed in'}
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowPremiumModal(true)}>
+                                <View style={[styles.profileBadge, { backgroundColor: '#0f172a', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' }]}>
+                                    <Ionicons name="sparkles" size={12} color="#fbbf24" />
+                                    <Text style={[styles.badgeText, { color: 'white' }]}>Get Premium</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </MotiView>
+
                     {/* Settings Sections */}
-                    {settingsSections.map((section) => (
-                        <View key={section.title} style={styles.section}>
-                            <Text style={styles.sectionTitle}>{section.title}</Text>
-                            <View style={styles.sectionContent}>
+                    {settingsSections.map((section, sectionIndex) => (
+                        <MotiView
+                            key={section.title}
+                            from={{ opacity: 0, translateY: 10 }}
+                            animate={{ opacity: 1, translateY: 0 }}
+                            transition={{ delay: sectionIndex * 50 }}
+                            style={styles.section}
+                        >
+                            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{section.title}</Text>
+                            <View style={[styles.sectionContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                                 {section.items.map((item, index) => (
                                     <TouchableOpacity
                                         key={item.title}
                                         style={[
                                             styles.settingItem,
-                                            index < section.items.length - 1 && styles.settingItemBorder,
+                                            index < section.items.length - 1 && [styles.settingItemBorder, { borderBottomColor: colors.border }],
                                         ]}
                                         onPress={item.onPress}
                                         activeOpacity={item.type === 'switch' ? 1 : 0.7}
                                     >
                                         <View style={styles.settingLeft}>
-                                            <View style={styles.iconWrapper}>
+                                            <View style={[styles.iconWrapper, { backgroundColor: `${item.iconColor}15` }]}>
                                                 {renderIcon(item)}
                                             </View>
-                                            <View>
-                                                <Text style={styles.settingTitle}>{item.title}</Text>
+                                            <View style={styles.settingTextWrapper}>
+                                                <Text style={[styles.settingTitle, { color: colors.text }]}>{item.title}</Text>
                                                 {item.subtitle && (
-                                                    <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
+                                                    <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>{item.subtitle}</Text>
                                                 )}
                                             </View>
                                         </View>
@@ -214,36 +382,60 @@ export default function SettingsScreen() {
                                                 <Switch
                                                     value={item.value as boolean}
                                                     onValueChange={item.onToggle}
-                                                    trackColor={{ false: '#334155', true: '#3b82f6' }}
-                                                    thumbColor={item.value ? '#fff' : '#94a3b8'}
+                                                    trackColor={{ false: colors.surfaceLight, true: colors.primary }}
+                                                    thumbColor={item.value ? '#fff' : colors.textSecondary}
                                                 />
                                             )}
                                             {item.type === 'arrow' && (
-                                                <Ionicons name="chevron-forward" size={20} color="#64748b" />
+                                                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                                             )}
                                             {item.type === 'label' && (
-                                                <Text style={styles.labelValue}>{item.value}</Text>
+                                                <View style={styles.labelContainer}>
+                                                    <Text style={[styles.labelValue, { color: colors.textMuted }]}>{item.value}</Text>
+                                                    {item.onPress && <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
+                                                </View>
                                             )}
                                         </View>
                                     </TouchableOpacity>
                                 ))}
                             </View>
-                        </View>
+                        </MotiView>
                     ))}
 
                     {/* Logout Button */}
-                    <TouchableOpacity
-                        style={styles.logoutBtn}
-                        onPress={handleLogout}
-                        activeOpacity={0.8}
+                    <MotiView
+                        from={{ opacity: 0, translateY: 10 }}
+                        animate={{ opacity: 1, translateY: 0 }}
+                        transition={{ delay: 300 }}
                     >
-                        <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-                        <Text style={styles.logoutText}>Logout</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.logoutBtn, { backgroundColor: colors.surface }]}
+                            onPress={handleLogout}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+                            <Text style={styles.logoutText}>Logout</Text>
+                        </TouchableOpacity>
+                    </MotiView>
 
-                    <View style={{ height: 40 }} />
+                    <View style={{ height: 100 }} />
                 </ScrollView>
             </SafeAreaView>
+
+            {/* Custom Modal */}
+            <CustomModal
+                visible={modal.visible}
+                title={modal.title}
+                message={modal.message}
+                buttons={modal.buttons}
+                onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+            />
+
+            {/* Premium Subscription Modal */}
+            <SubscriptionModal
+                visible={showPremiumModal}
+                onClose={() => setShowPremiumModal(false)}
+            />
         </View>
     );
 }
@@ -251,7 +443,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0b0f19',
     },
     safeArea: {
         flex: 1,
@@ -259,68 +450,77 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: 20,
     },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+    },
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontFamily: 'Outfit_700Bold',
+    },
     profileCard: {
-        backgroundColor: '#1e293b',
         borderRadius: 20,
         padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: '#334155',
-    },
-    avatar: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#334155',
     },
     profileInfo: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: 14,
     },
     profileName: {
-        color: 'white',
         fontSize: 18,
         fontFamily: 'Outfit_700Bold',
     },
     profileEmail: {
-        color: '#94a3b8',
-        fontSize: 14,
+        fontSize: 13,
         marginTop: 2,
     },
-    editBtn: {
-        padding: 8,
-        backgroundColor: '#0f172a',
-        borderRadius: 10,
+    profileBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 6,
+    },
+    badgeText: {
+        color: '#22c55e',
+        fontSize: 11,
+        fontFamily: 'Outfit_500Medium',
     },
     section: {
-        marginBottom: 24,
+        marginBottom: 20,
     },
     sectionTitle: {
-        color: '#64748b',
-        fontSize: 12,
-        letterSpacing: 1,
-        marginBottom: 12,
+        fontSize: 11,
+        letterSpacing: 1.5,
+        marginBottom: 10,
         marginLeft: 4,
         fontFamily: 'Outfit_700Bold',
     },
     sectionContent: {
-        backgroundColor: '#1e293b',
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#334155',
         overflow: 'hidden',
     },
     settingItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 16,
+        padding: 14,
     },
     settingItemBorder: {
         borderBottomWidth: 1,
-        borderBottomColor: '#334155',
     },
     settingLeft: {
         flexDirection: 'row',
@@ -331,30 +531,33 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: '#0f172a',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
+    settingTextWrapper: {
+        flex: 1,
+    },
     settingTitle: {
-        color: 'white',
         fontSize: 15,
         fontFamily: 'Outfit_500Medium',
     },
     settingSubtitle: {
-        color: '#64748b',
         fontSize: 12,
         marginTop: 2,
     },
     settingRight: {
         marginLeft: 8,
     },
+    labelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
     labelValue: {
-        color: '#64748b',
         fontSize: 14,
     },
     logoutBtn: {
-        backgroundColor: '#1e293b',
         borderRadius: 16,
         padding: 16,
         flexDirection: 'row',
@@ -368,5 +571,43 @@ const styles = StyleSheet.create({
         color: '#ef4444',
         fontSize: 16,
         fontFamily: 'Outfit_700Bold',
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalContent: {
+        width: '100%',
+        borderRadius: 20,
+        padding: 24,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontFamily: 'Outfit_700Bold',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    modalMessage: {
+        fontSize: 14,
+        fontFamily: 'Outfit_400Regular',
+        lineHeight: 22,
+        marginBottom: 24,
+        textAlign: 'center',
+    },
+    modalButtons: {
+        gap: 10,
+    },
+    modalButton: {
+        padding: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    modalButtonText: {
+        fontSize: 15,
+        fontFamily: 'Outfit_600SemiBold',
     },
 });

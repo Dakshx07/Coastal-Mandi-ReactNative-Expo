@@ -15,10 +15,10 @@ export interface CartItem {
 
 interface CartContextType {
     items: CartItem[];
-    addItem: (item: Omit<CartItem, 'addedAt'>) => void;
-    removeItem: (id: string) => void;
+    addItem: (item: Omit<CartItem, 'addedAt' | 'id'> & { id?: string }) => boolean;
+    removeItem: (name: string) => void;
     clearCart: () => void;
-    isInCart: (id: string) => boolean;
+    isInCart: (name: string) => boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -26,16 +26,30 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([]);
 
-    const addItem = (item: Omit<CartItem, 'addedAt'>) => {
-        if (!items.find(i => i.id === item.id)) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setItems(prev => [...prev, { ...item, addedAt: new Date() }]);
+    // Check by name to prevent duplicates (same fish species)
+    const addItem = (item: Omit<CartItem, 'addedAt' | 'id'> & { id?: string }): boolean => {
+        // Check if fish with same name already exists
+        if (items.find(i => i.name === item.name)) {
+            // Already in cart, provide feedback but don't add
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            return false;
         }
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setItems(prev => [
+            ...prev,
+            {
+                ...item,
+                id: item.name.toLowerCase().replace(/\s+/g, '-'), // Use name as ID
+                addedAt: new Date(),
+            },
+        ]);
+        return true;
     };
 
-    const removeItem = (id: string) => {
+    const removeItem = (name: string) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setItems(prev => prev.filter(item => item.id !== id));
+        setItems(prev => prev.filter(item => item.name !== name));
     };
 
     const clearCart = () => {
@@ -43,8 +57,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems([]);
     };
 
-    const isInCart = (id: string) => {
-        return items.some(item => item.id === id);
+    // Check by name instead of ID
+    const isInCart = (name: string) => {
+        return items.some(item => item.name === name);
     };
 
     return (

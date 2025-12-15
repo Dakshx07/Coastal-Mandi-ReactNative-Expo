@@ -16,13 +16,20 @@ import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 
+import { useUser } from '@/contexts/UserContext';
+
+
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const { login } = useUser();
 
     const handleLogin = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Extract name from email (before @)
+        const name = email.split('@')[0] || 'Coastal User';
+        login(name, email); // Store user data
         router.replace('/(tabs)');
     };
 
@@ -30,7 +37,8 @@ export default function LoginScreen() {
         <View style={styles.container}>
             <StatusBar style="light" />
             <LinearGradient
-                colors={['#0b0f19', '#111827', '#0f172a']}
+                colors={['#0c1929', '#1e3a5f', '#0ea5e9']}
+                locations={[0, 0.5, 1]}
                 style={StyleSheet.absoluteFill}
             />
 
@@ -43,29 +51,20 @@ export default function LoginScreen() {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Header */}
-                    <MotiView
-                        from={{ opacity: 0, translateX: -20 }}
-                        animate={{ opacity: 1, translateX: 0 }}
-                        transition={{ type: 'timing', duration: 400 }}
-                    >
-                        <TouchableOpacity
-                            style={styles.backBtn}
-                            onPress={() => router.back()}
-                        >
-                            <Ionicons name="arrow-back" size={22} color="#94a3b8" />
-                        </TouchableOpacity>
-                    </MotiView>
 
-                    {/* Title */}
+
+                    {/* Icon & Title */}
                     <MotiView
-                        from={{ opacity: 0, translateY: 20 }}
-                        animate={{ opacity: 1, translateY: 0 }}
+                        from={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 100, type: 'timing', duration: 500 }}
                         style={styles.header}
                     >
+                        <View style={styles.iconCircle}>
+                            <Ionicons name="boat" size={36} color="#0ea5e9" />
+                        </View>
                         <Text style={styles.title}>Welcome Back</Text>
-                        <Text style={styles.subtitle}>Sign in to continue</Text>
+                        <Text style={styles.subtitle}>Sign in to continue to Coastal Mandi</Text>
                     </MotiView>
 
                     {/* Form */}
@@ -76,12 +75,12 @@ export default function LoginScreen() {
                         style={styles.form}
                     >
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Email</Text>
                             <View style={styles.inputWrapper}>
+                                <Ionicons name="mail-outline" size={20} color="#7dd3fc" />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Enter your email"
-                                    placeholderTextColor="#475569"
+                                    placeholder="Email Address"
+                                    placeholderTextColor="#7dd3fc"
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     value={email}
@@ -91,12 +90,12 @@ export default function LoginScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Password</Text>
                             <View style={styles.inputWrapper}>
+                                <Ionicons name="lock-closed-outline" size={20} color="#7dd3fc" />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Enter your password"
-                                    placeholderTextColor="#475569"
+                                    placeholder="Password"
+                                    placeholderTextColor="#7dd3fc"
                                     secureTextEntry={!showPassword}
                                     value={password}
                                     onChangeText={setPassword}
@@ -105,7 +104,7 @@ export default function LoginScreen() {
                                     <Ionicons
                                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                                         size={20}
-                                        color="#64748b"
+                                        color="#7dd3fc"
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -120,14 +119,8 @@ export default function LoginScreen() {
                             onPress={handleLogin}
                             activeOpacity={0.9}
                         >
-                            <LinearGradient
-                                colors={['#0ea5e9', '#3b82f6']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.submitBtnGradient}
-                            >
-                                <Text style={styles.submitBtnText}>Sign In</Text>
-                            </LinearGradient>
+                            <Text style={styles.submitBtnText}>Sign In</Text>
+                            <Ionicons name="arrow-forward" size={20} color="#0c1929" />
                         </TouchableOpacity>
                     </MotiView>
 
@@ -154,7 +147,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0b0f19',
+        backgroundColor: '#0c1929',
     },
     keyboardView: {
         flex: 1,
@@ -166,79 +159,79 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     backBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: '#1e293b',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 24,
+        // ... (removed)
     },
     header: {
-        marginBottom: 32,
+        alignItems: 'center',
+        marginBottom: 40,
+        marginTop: 20,
+    },
+    iconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(14, 165, 233, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+        borderWidth: 2,
+        borderColor: 'rgba(14, 165, 233, 0.3)',
     },
     title: {
         color: 'white',
-        fontSize: 28,
+        fontSize: 26,
         fontFamily: 'Outfit_700Bold',
         marginBottom: 8,
     },
     subtitle: {
-        color: '#64748b',
+        color: '#7dd3fc',
         fontSize: 15,
         fontFamily: 'Outfit_400Regular',
     },
     form: {
-        gap: 20,
+        gap: 16,
     },
     inputGroup: {
         gap: 8,
     },
-    label: {
-        color: '#94a3b8',
-        fontSize: 13,
-        fontFamily: 'Outfit_500Medium',
-    },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1e293b',
-        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 14,
         paddingHorizontal: 16,
-        height: 52,
+        height: 56,
+        gap: 12,
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     input: {
         flex: 1,
         color: 'white',
-        fontSize: 15,
+        fontSize: 16,
         fontFamily: 'Outfit_400Regular',
     },
     forgotBtn: {
         alignSelf: 'flex-end',
     },
     forgotText: {
-        color: '#3b82f6',
+        color: '#7dd3fc',
         fontSize: 13,
         fontFamily: 'Outfit_500Medium',
     },
     submitBtn: {
-        marginTop: 4,
-        shadowColor: '#3b82f6',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-    },
-    submitBtnGradient: {
-        height: 52,
-        borderRadius: 12,
+        flexDirection: 'row',
+        backgroundColor: '#0ea5e9',
+        height: 56,
+        borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 8,
+        marginTop: 8,
     },
     submitBtnText: {
-        color: 'white',
-        fontSize: 16,
+        color: '#0c1929',
+        fontSize: 17,
         fontFamily: 'Outfit_700Bold',
     },
     footer: {
@@ -246,12 +239,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     footerText: {
-        color: '#64748b',
+        color: '#7dd3fc',
         fontSize: 14,
         fontFamily: 'Outfit_400Regular',
     },
     footerLink: {
-        color: '#3b82f6',
+        color: 'white',
         fontFamily: 'Outfit_700Bold',
     },
 });

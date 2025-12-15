@@ -1,9 +1,9 @@
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { LogBox, Platform } from 'react-native';
+import { LogBox } from 'react-native';
 import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -14,6 +14,8 @@ import {
 } from '@expo-google-fonts/outfit';
 
 import { CartProvider } from '@/contexts/CartContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { UserProvider } from '@/contexts/UserContext';
 
 // Suppress warnings from dependencies
 LogBox.ignoreLogs([
@@ -31,17 +33,68 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-const CoastalTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: '#0b0f19',
-    card: '#1e293b',
-    text: '#f8fafc',
-    border: '#334155',
-    primary: '#3b82f6',
-  },
-};
+function RootLayoutNav() {
+  const { colors, isDark } = useTheme();
+
+  const navTheme = {
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+      background: colors.background,
+      card: colors.surface,
+      text: colors.text,
+      border: colors.border,
+      primary: colors.primary,
+    },
+  };
+
+  return (
+    <NavThemeProvider value={navTheme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.background,
+        },
+        headerTintColor: colors.text,
+        headerTitleStyle: {
+          fontFamily: 'Outfit_700Bold',
+        },
+        gestureEnabled: false,
+      }}>
+        <Stack.Screen
+          name="index"
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="login"
+          options={{
+            headerShown: false,
+            animation: 'fade',
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="signup"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            gestureEnabled: true,
+          }}
+        />
+      </Stack>
+    </NavThemeProvider>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -66,55 +119,12 @@ export default function RootLayout() {
   }
 
   return (
-    <CartProvider>
-      <ThemeProvider value={CoastalTheme}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{
-          headerStyle: {
-            backgroundColor: '#0b0f19',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontFamily: 'Outfit_700Bold',
-          },
-          // Disable iOS swipe back gesture on main screens to prevent accidental logout
-          gestureEnabled: false,
-        }}>
-          <Stack.Screen
-            name="index"
-            options={{
-              headerShown: false,
-              gestureEnabled: false,
-            }}
-          />
-          <Stack.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
-              // CRITICAL: Disable swipe back on tabs to prevent logout
-              gestureEnabled: false,
-            }}
-          />
-          <Stack.Screen
-            name="login"
-            options={{
-              headerShown: false,
-              animation: 'fade',
-              // Allow back gesture on login
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="signup"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_right',
-              // Allow back gesture on signup
-              gestureEnabled: true,
-            }}
-          />
-        </Stack>
-      </ThemeProvider>
-    </CartProvider>
+    <ThemeProvider>
+      <UserProvider>
+        <CartProvider>
+          <RootLayoutNav />
+        </CartProvider>
+      </UserProvider>
+    </ThemeProvider>
   );
 }

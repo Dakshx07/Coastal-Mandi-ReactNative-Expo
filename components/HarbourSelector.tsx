@@ -48,10 +48,10 @@ export default function HarbourSelector({ selectedHarbour, onSelect }: HarbourSe
                     <View style={styles.locationIcon}>
                         <Ionicons name="location-sharp" size={20} color="#3b82f6" />
                     </View>
-                    <View>
+                    <View style={{ flex: 1 }}>
                         <Text style={styles.label}>CURRENT MARKET</Text>
                         <View style={styles.valueRow}>
-                            <Text style={styles.value}>{selectedHarbour}</Text>
+                            <Text style={styles.value} numberOfLines={1}>{selectedHarbour}</Text>
                             <Ionicons
                                 name={isOpen ? "chevron-up" : "chevron-down"}
                                 size={20}
@@ -96,7 +96,7 @@ export default function HarbourSelector({ selectedHarbour, onSelect }: HarbourSe
                                     {harbour}
                                 </Text>
                                 {harbour === selectedHarbour && (
-                                    <Ionicons name="checkmark" size={20} color="#3b82f6" />
+                                    <Ionicons name="checkmark-circle" size={20} color="#3b82f6" />
                                 )}
                             </TouchableOpacity>
                         ))}
@@ -114,10 +114,14 @@ const styles = StyleSheet.create({
         padding: 14,
         borderWidth: 1,
         borderColor: '#334155',
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1, // Take available space
     },
     selectorContent: {
         flexDirection: 'row',
         alignItems: 'center',
+        flex: 1,
     },
     locationIcon: {
         width: 44,
@@ -138,7 +142,8 @@ const styles = StyleSheet.create({
     valueRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        justifyContent: 'space-between',
+        flex: 1,
     },
     value: {
         color: 'white',
@@ -172,7 +177,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#0f172a',
     },
     optionText: {
-        color: '#f8fafc',
+        color: '#94a3b8',
         fontSize: 16,
         fontFamily: 'Outfit_500Medium',
     },

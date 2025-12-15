@@ -50,9 +50,42 @@ export default function CartScreen() {
             return;
         }
 
-        const message = `🐟 *Coastal Mandi Watchlist*\n\n${items.map(item =>
-            `• ${item.name} - ₹${item.price}/kg (${item.harbour})`
-        ).join('\n')}\n\n📅 ${new Date().toLocaleDateString()}\n\n🌊 Get live fish prices at Coastal Mandi`;
+        const today = new Date().toLocaleDateString('en-IN', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        const totalValue = items.reduce((sum, item) => sum + item.price, 0);
+        const avgPrice = Math.round(totalValue / items.length);
+
+        const upTrends = items.filter(i => i.trend === 'up').length;
+        const downTrends = items.filter(i => i.trend === 'down').length;
+
+        const message = `🌊 *COASTAL MANDI WATCHLIST*
+━━━━━━━━━━━━━━━━━━━━━━━
+📅 ${today}
+
+📋 *${items.length} Fish Species*
+
+${items.map((item, idx) =>
+            `${idx + 1}. *${item.name}*
+   💰 ₹${item.price}/kg ${item.trend === 'up' ? '📈' : '📉'} ${item.trendPercentage.toFixed(1)}%
+   📍 ${item.harbour}`
+        ).join('\n\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+📊 *MARKET SUMMARY*
+• Average Price: ₹${avgPrice}/kg
+• Trending Up: ${upTrends} species
+• Trending Down: ${downTrends} species
+
+💡 *Pro Tip:* Buy species trending down for better value!
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🔗 Get live rates on *Coastal Mandi App*
+_Your trusted fish market companion_`;
 
         try {
             // Use Share API which works reliably on iOS
@@ -100,7 +133,7 @@ export default function CartScreen() {
 
             <TouchableOpacity
                 style={styles.removeBtn}
-                onPress={() => handleRemove(item.id)}
+                onPress={() => handleRemove(item.name)}
             >
                 <Ionicons name="close" size={18} color="#ef4444" />
             </TouchableOpacity>
