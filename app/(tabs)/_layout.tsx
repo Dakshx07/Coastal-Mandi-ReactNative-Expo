@@ -17,22 +17,21 @@ export default function TabLayout() {
           bottom: 0,
           left: 0,
           right: 0,
-          height: 80 + insets.bottom / 2, // Taller tab bar
+          height: 80 + insets.bottom / 2,
           backgroundColor: Platform.OS === 'ios' ? 'transparent' : '#1e293b',
           borderTopWidth: 0,
           elevation: 0,
           paddingTop: 10,
         },
-        tabBarBackground: () => (
+        tabBarBackground: () =>
           Platform.OS === 'ios' ? (
             <BlurView intensity={80} tint="dark" style={{ flex: 1 }} />
-          ) : null
-        ),
+          ) : null,
         tabBarActiveTintColor: '#3b82f6',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarLabelStyle: {
           fontFamily: 'Outfit_500Medium',
-          fontSize: 12,
+          fontSize: 11,
           marginBottom: 10,
         },
       }}
@@ -42,7 +41,7 @@ export default function TabLayout() {
         options={{
           title: 'Rates',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
+            <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />
           ),
         }}
       />
@@ -51,19 +50,26 @@ export default function TabLayout() {
         options={{
           title: 'Compare',
           tabBarIcon: ({ color }) => (
-            <FontAwesome5 name="exchange-alt" size={22} color={color} />
+            <FontAwesome5 name="exchange-alt" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="calculator"
+        options={{
+          title: 'Calculator',
+          tabBarIcon: ({ color, focused }) => (
+            <FontAwesome5 name="calculator" size={20} color={focused ? '#22c55e' : color} />
           ),
         }}
       />
       <Tabs.Screen
         name="cart"
         options={{
-          title: 'Cart',
+          title: 'Watchlist',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "cart" : "cart-outline"} size={26} color={color} />
+            <Ionicons name={focused ? "heart" : "heart-outline"} size={22} color={color} />
           ),
-          tabBarBadge: 1, // Mock badge
-          tabBarBadgeStyle: { backgroundColor: '#22c55e', color: 'white' },
         }}
       />
       <Tabs.Screen
@@ -71,7 +77,7 @@ export default function TabLayout() {
         options={{
           title: 'Insights',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "sparkles" : "sparkles-outline"} size={24} color={color} />
+            <Ionicons name={focused ? "sparkles" : "sparkles-outline"} size={22} color={color} />
           ),
         }}
       />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     View,
     Text,
@@ -15,36 +15,27 @@ import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
-import FloatingActions from '@/components/FloatingActions';
-import HarbourSelector from '@/components/HarbourSelector';
-
-interface CartItem {
-    id: string;
-    name: string;
-    scientificName: string;
-    price: number;
-    trend: 'up' | 'down';
-    trendPercentage: number;
-    imageUrl: string;
-}
+import AppHeader from '@/components/AppHeader';
+import { useCart, CartItem } from '@/contexts/CartContext';
 
 export default function CartScreen() {
-    const [cart, setCart] = useState<CartItem[]>([]);
-    const [selectedHarbour, setSelectedHarbour] = useState('Kochi Harbour');
+    const { items, removeItem, clearCart } = useCart();
 
-    const removeItem = (id: string) => {
+    const handleRemove = (id: string) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        setCart(cart.filter(item => item.id !== id));
+        removeItem(id);
     };
 
-    const clearAll = () => {
+    const handleClearAll = () => {
+        if (items.length === 0) return;
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
             'Clear Watchlist',
             'Are you sure you want to remove all items?',
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Clear', style: 'destructive', onPress: () => setCart([]) },
+                { text: 'Clear', style: 'destructive', onPress: clearCart },
             ]
         );
     };
@@ -52,14 +43,14 @@ export default function CartScreen() {
     const sendWhatsApp = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-        if (cart.length === 0) {
-            Alert.alert('Empty Cart', 'Add items to your watchlist first.');
+        if (items.length === 0) {
+            Alert.alert('Empty Watchlist', 'Add species to your watchlist first.');
             return;
         }
 
-        const message = `🐟 *Coastal Mandi Order*\n\n${cart.map(item =>
-            `• ${item.name} - ₹${item.price}/kg`
-        ).join('\n')}\n\n📍 ${selectedHarbour}\n📅 ${new Date().toLocaleDateString()}`;
+        const message = `🐟 *Coastal Mandi Watchlist*\n\n${items.map(item =>
+            `• ${item.name} - ₹${item.price}/kg (${item.harbour})`
+        ).join('\n')}\n\n📅 ${new Date().toLocaleDateString()}`;
 
         const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
 
@@ -68,7 +59,7 @@ export default function CartScreen() {
                 if (supported) {
                     Linking.openURL(whatsappUrl);
                 } else {
-                    Alert.alert('WhatsApp not installed', 'Please install WhatsApp to share your order.');
+                    Alert.alert('WhatsApp not installed', 'Please install WhatsApp to share.');
                 }
             });
     };
@@ -78,17 +69,22 @@ export default function CartScreen() {
         router.push('/(tabs)');
     };
 
-    const renderItem = ({ item }: { item: CartItem }) => (
+    const renderItem = ({ item, index }: { item: CartItem; index: number }) => (
         <MotiView
             from={{ opacity: 0, translateX: -20 }}
             animate={{ opacity: 1, translateX: 0 }}
+            transition={{ delay: index * 50 }}
             style={styles.cartItem}
         >
             <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
 
             <View style={styles.itemContent}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemSubtitle}>{item.scientificName}</Text>
+                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.itemSubtitle} numberOfLines={1}>{item.scientificName}</Text>
+                <View style={styles.harbourBadge}>
+                    <Ionicons name="location" size={10} color="#3b82f6" />
+                    <Text style={styles.harbourBadgeText}>{item.harbour.split(' ')[0]}</Text>
+                </View>
             </View>
 
             <View style={styles.itemRight}>
@@ -97,15 +93,15 @@ export default function CartScreen() {
                     styles.itemTrend,
                     { color: item.trend === 'down' ? '#ef4444' : '#22c55e' }
                 ]}>
-                    {item.trend === 'down' ? '↓' : '↑'} {item.trendPercentage}%
+                    {item.trend === 'down' ? '↓' : '↑'} {item.trendPercentage.toFixed(1)}%
                 </Text>
             </View>
 
             <TouchableOpacity
                 style={styles.removeBtn}
-                onPress={() => removeItem(item.id)}
+                onPress={() => handleRemove(item.id)}
             >
-                <Ionicons name="close" size={20} color="#ef4444" />
+                <Ionicons name="close" size={18} color="#ef4444" />
             </TouchableOpacity>
         </MotiView>
     );
@@ -113,96 +109,73 @@ export default function CartScreen() {
     return (
         <View style={styles.container}>
             <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <View style={styles.logoCircle} />
-                        <Text style={styles.logoText}>COASTAL MANDI</Text>
+                <View style={styles.content}>
+                    {/* App Header */}
+                    <AppHeader />
+
+                    {/* Watchlist Header Card */}
+                    <View style={styles.headerCard}>
+                        <View style={styles.headerIconWrapper}>
+                            <Ionicons name="heart" size={28} color="#ef4444" />
+                        </View>
+                        <Text style={styles.headerTitle}>My Watchlist</Text>
+                        <Text style={styles.headerSubtitle}>
+                            {items.length > 0
+                                ? `${items.length} species saved`
+                                : 'Track your favorite species for quick access'
+                            }
+                        </Text>
                     </View>
-                    <TouchableOpacity
-                        style={styles.settingsBtn}
-                        onPress={() => router.push('/(tabs)/settings')}
-                    >
-                        <Text style={styles.settingsBtnText}>Settings</Text>
-                        <Image
-                            source={{ uri: 'https://placehold.co/40x40/3b82f6/FFF?text=U' }}
-                            style={styles.avatarSmall}
-                        />
-                    </TouchableOpacity>
-                </View>
 
-                {/* Harbour Selector */}
-                <View style={styles.harbourWrapper}>
-                    <HarbourSelector
-                        selectedHarbour={selectedHarbour}
-                        onSelect={setSelectedHarbour}
-                    />
-                </View>
-
-                {/* Cart Header Card */}
-                <View style={styles.cartHeaderCard}>
-                    <View style={styles.cartIconWrapper}>
-                        <Ionicons name="cart" size={32} color="#22c55e" />
-                    </View>
-                    <Text style={styles.cartTitle}>My Watchlist</Text>
-                    <Text style={styles.cartSubtitle}>
-                        Track your favorite species for quick access
-                    </Text>
-                </View>
-
-                {/* Cart Items or Empty State */}
-                {cart.length > 0 ? (
-                    <>
-                        {/* Order Section Header */}
-                        <View style={styles.orderHeader}>
-                            <Text style={styles.orderHeaderText}>YOUR ORDER</Text>
-                            <TouchableOpacity onPress={clearAll}>
-                                <View style={styles.clearAllBtn}>
+                    {/* Cart Items or Empty State */}
+                    {items.length > 0 ? (
+                        <>
+                            {/* Actions Row */}
+                            <View style={styles.actionsRow}>
+                                <TouchableOpacity onPress={handleClearAll} style={styles.clearBtn}>
                                     <Ionicons name="trash-outline" size={14} color="#94a3b8" />
-                                    <Text style={styles.clearAllText}>Clear All</Text>
-                                </View>
+                                    <Text style={styles.clearBtnText}>Clear All</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* WhatsApp Button */}
+                            <TouchableOpacity
+                                style={styles.whatsappBtn}
+                                activeOpacity={0.8}
+                                onPress={sendWhatsApp}
+                            >
+                                <FontAwesome5 name="whatsapp" size={18} color="white" />
+                                <Text style={styles.whatsappText}>Share via WhatsApp</Text>
+                            </TouchableOpacity>
+
+                            <FlatList
+                                data={items}
+                                keyExtractor={(item) => item.id}
+                                renderItem={renderItem}
+                                contentContainerStyle={styles.listContent}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        </>
+                    ) : (
+                        <View style={styles.emptyCard}>
+                            <View style={styles.emptyIconWrapper}>
+                                <Ionicons name="heart-outline" size={48} color="#64748b" />
+                            </View>
+                            <Text style={styles.emptyTitle}>Watchlist is Empty</Text>
+                            <Text style={styles.emptySubtext}>
+                                Tap the + button on any species card to add it to your watchlist.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.browseBtn}
+                                onPress={navigateToRates}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.browseBtnText}>Browse Rates</Text>
                             </TouchableOpacity>
                         </View>
-
-                        {/* WhatsApp Button */}
-                        <TouchableOpacity
-                            style={styles.whatsappBtn}
-                            activeOpacity={0.8}
-                            onPress={sendWhatsApp}
-                        >
-                            <FontAwesome5 name="whatsapp" size={20} color="white" />
-                            <Text style={styles.whatsappText}>Send Order via WhatsApp</Text>
-                        </TouchableOpacity>
-
-                        <FlatList
-                            data={cart}
-                            keyExtractor={(item) => item.id}
-                            renderItem={renderItem}
-                            contentContainerStyle={styles.listContent}
-                            showsVerticalScrollIndicator={false}
-                        />
-                    </>
-                ) : (
-                    <View style={styles.emptyCard}>
-                        <View style={styles.emptyIconWrapper}>
-                            <Ionicons name="cart-outline" size={48} color="#64748b" />
-                        </View>
-                        <Text style={styles.emptyTitle}>Cart is Empty</Text>
-                        <Text style={styles.emptySubtext}>
-                            Add species to your cart by tapping the + button on any species card.
-                        </Text>
-                        <TouchableOpacity
-                            style={styles.browseBtn}
-                            onPress={navigateToRates}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={styles.browseBtnText}>Browse Rates</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                    )}
+                </View>
             </SafeAreaView>
-
-            <FloatingActions />
         </View>
     );
 }
@@ -214,99 +187,51 @@ const styles = StyleSheet.create({
     },
     safeArea: {
         flex: 1,
-        paddingHorizontal: 20,
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-        marginTop: 10,
+    content: {
+        flex: 1,
+        paddingHorizontal: 16,
     },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    logoCircle: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#3b82f6',
-    },
-    logoText: {
-        color: 'white',
-        fontSize: 16,
-        fontFamily: 'Outfit_700Bold',
-        letterSpacing: 0.5,
-    },
-    settingsBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    headerCard: {
         backgroundColor: '#1e293b',
-        paddingLeft: 12,
-        paddingRight: 4,
-        paddingVertical: 4,
-        borderRadius: 24,
-        gap: 8,
-    },
-    settingsBtnText: {
-        color: '#94a3b8',
-        fontSize: 13,
-        fontFamily: 'Outfit_500Medium',
-    },
-    avatarSmall: {
-        width: 32,
-        height: 32,
         borderRadius: 16,
-    },
-    harbourWrapper: {
-        marginBottom: 16,
-    },
-    cartHeaderCard: {
-        backgroundColor: '#1e293b',
-        borderRadius: 20,
-        padding: 24,
+        padding: 20,
         alignItems: 'center',
         marginBottom: 16,
         borderWidth: 1,
         borderColor: '#334155',
     },
-    cartIconWrapper: {
-        marginBottom: 12,
+    headerIconWrapper: {
+        marginBottom: 10,
     },
-    cartTitle: {
+    headerTitle: {
         color: 'white',
-        fontSize: 22,
+        fontSize: 20,
         fontFamily: 'Outfit_700Bold',
-        marginBottom: 8,
+        marginBottom: 6,
     },
-    cartSubtitle: {
+    headerSubtitle: {
         color: '#94a3b8',
-        fontSize: 14,
-        textAlign: 'center',
+        fontSize: 13,
         fontFamily: 'Outfit_400Regular',
     },
-    orderHeader: {
+    actionsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        justifyContent: 'flex-end',
         marginBottom: 12,
     },
-    orderHeaderText: {
-        color: '#94a3b8',
-        fontSize: 12,
-        letterSpacing: 1,
-        fontFamily: 'Outfit_700Bold',
-    },
-    clearAllBtn: {
+    clearBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        backgroundColor: '#1e293b',
+        borderRadius: 8,
     },
-    clearAllText: {
+    clearBtnText: {
         color: '#94a3b8',
-        fontSize: 13,
+        fontSize: 12,
         fontFamily: 'Outfit_500Medium',
     },
     whatsappBtn: {
@@ -314,107 +239,119 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 10,
-        paddingVertical: 16,
-        borderRadius: 14,
+        gap: 8,
+        paddingVertical: 14,
+        borderRadius: 12,
         marginBottom: 16,
-        shadowColor: '#22c55e',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
     },
     whatsappText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 15,
         fontFamily: 'Outfit_700Bold',
     },
     listContent: {
-        paddingBottom: 120,
+        paddingBottom: 100,
     },
     cartItem: {
         backgroundColor: '#1e293b',
-        borderRadius: 16,
-        padding: 12,
+        borderRadius: 14,
+        padding: 10,
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 10,
         borderWidth: 1,
         borderColor: '#334155',
     },
     itemImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 12,
+        width: 54,
+        height: 54,
+        borderRadius: 10,
         backgroundColor: '#334155',
     },
     itemContent: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: 10,
     },
     itemName: {
+        color: 'white',
+        fontSize: 14,
+        fontFamily: 'Outfit_700Bold',
+    },
+    itemSubtitle: {
+        color: '#64748b',
+        fontSize: 11,
+        marginTop: 2,
+        fontFamily: 'Outfit_400Regular',
+    },
+    harbourBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 4,
+        backgroundColor: '#0f172a',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+    },
+    harbourBadgeText: {
+        color: '#3b82f6',
+        fontSize: 10,
+        fontFamily: 'Outfit_500Medium',
+    },
+    itemRight: {
+        alignItems: 'flex-end',
+        marginRight: 10,
+    },
+    itemPrice: {
         color: 'white',
         fontSize: 16,
         fontFamily: 'Outfit_700Bold',
     },
-    itemSubtitle: {
-        color: '#94a3b8',
-        fontSize: 12,
-        marginTop: 2,
-        fontFamily: 'Outfit_400Regular',
-    },
-    itemRight: {
-        alignItems: 'flex-end',
-        marginRight: 12,
-    },
-    itemPrice: {
-        color: 'white',
-        fontSize: 18,
-        fontFamily: 'Outfit_700Bold',
-    },
     itemTrend: {
-        fontSize: 13,
-        fontFamily: 'Outfit_500Medium',
+        fontSize: 11,
+        fontFamily: 'Outfit_600SemiBold',
+        marginTop: 2,
     },
     removeBtn: {
         padding: 8,
         backgroundColor: '#450a0a',
-        borderRadius: 10,
+        borderRadius: 8,
     },
     emptyCard: {
         backgroundColor: '#1e293b',
-        borderRadius: 20,
-        padding: 32,
+        borderRadius: 16,
+        padding: 28,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#334155',
     },
     emptyIconWrapper: {
-        marginBottom: 16,
+        marginBottom: 14,
     },
     emptyTitle: {
         color: 'white',
-        fontSize: 20,
+        fontSize: 18,
         fontFamily: 'Outfit_700Bold',
         marginBottom: 8,
     },
     emptySubtext: {
         color: '#64748b',
-        fontSize: 14,
+        fontSize: 13,
         textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 24,
+        lineHeight: 20,
+        marginBottom: 20,
         fontFamily: 'Outfit_400Regular',
     },
     browseBtn: {
         backgroundColor: '#3b82f6',
-        paddingHorizontal: 24,
-        paddingVertical: 14,
-        borderRadius: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 10,
     },
     browseBtnText: {
         color: 'white',
-        fontSize: 15,
+        fontSize: 14,
         fontFamily: 'Outfit_700Bold',
     },
 });
