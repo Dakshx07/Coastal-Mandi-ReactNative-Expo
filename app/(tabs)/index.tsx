@@ -12,10 +12,13 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator
 } from 'react-native';
+import { Logger } from '@/services/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { MotiView } from 'moti';
+import { useRouter } from 'expo-router';
+import { WeatherService, WeatherData } from '@/services/weather';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/Colors';
 
@@ -67,6 +70,7 @@ import { DataService } from '@/services/data';
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedHarbour, setSelectedHarbour] = useState('Kochi Harbour');
   const [selectedFish, setSelectedFish] = useState<SpeciesData | null>(null);
@@ -147,7 +151,20 @@ export default function Dashboard() {
     }
   }, [selectedHarbour, marketData.length]);
 
-  const weather = WEATHER_DATA[selectedHarbour] || WEATHER_DATA['Kochi Harbour'];
+  useEffect(() => {
+    fetchWeather();
+  }, [selectedHarbour]);
+
+  const fetchWeather = async () => {
+    // Use the Robust Service (handles coords lookup & fallback internaly)
+    try {
+      const data = await WeatherService.getWeatherForHarbour(selectedHarbour);
+      setWeather(data);
+    } catch (e) {
+      console.error("Weather fetch failed in UI", e);
+    }
+  };
+
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
   const handleHarbourChange = (harbour: string) => {
@@ -265,6 +282,8 @@ export default function Dashboard() {
                 </View>
 
                 {/* Cross Harbour Card (only when searching) */}
+                {/* Weather & Location Header */}
+
                 {crossHarbourData && (
                   <MotiView
                     from={{ opacity: 0, translateY: -10 }}

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { Logger } from './logger';
 
 export interface Species {
     id: string;
@@ -87,7 +88,7 @@ export const DataService = {
                     stockStatus: item.stock_status,
                 }));
         } catch (e) {
-            console.error('Unexpected error in getMarketData:', e);
+            Logger.error('Unexpected error in getMarketData:', e);
             return [];
         }
     },

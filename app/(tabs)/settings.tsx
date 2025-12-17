@@ -295,8 +295,21 @@ export default function SettingsScreen() {
                     iconFamily: 'ionicons',
                     title: 'App Version',
                     type: 'label',
-                    value: '1.0.0',
+                    value: '1.0.0 (Beta)',
                     iconColor: '#64748b',
+                    onPress: () => {
+                        // Security Check
+                        const ADMIN_EMAILS = ['dakshhiran@gmail.com', 'admin@coastalmandi.in']; // Add your team emails here
+
+                        if (user?.email && ADMIN_EMAILS.includes(user.email)) {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                            router.push('/admin');
+                        } else {
+                            // Fake interaction for normal users
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            alert('You are on the latest Beta version.');
+                        }
+                    }
                 },
             ],
         },

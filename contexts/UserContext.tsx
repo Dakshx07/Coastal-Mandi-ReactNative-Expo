@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/services/supabase';
+import { Logger } from '@/services/logger';
 import { Session } from '@supabase/supabase-js';
 
 interface UserData {
@@ -12,6 +13,7 @@ interface UserData {
 interface UserContextType {
     user: UserData;
     isLoading: boolean;
+    isGuest: boolean;
     login: (email: string, password: string) => Promise<{ error?: any }>;
     signup: (email: string, password: string, name: string) => Promise<{ error?: any }>;
     logout: () => Promise<void>;
@@ -31,28 +33,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<UserData>(defaultUser);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        // 1. Check active session on load
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                updateUserState(session);
-            }
-            setIsLoading(false);
-        });
-
-        // 2. Listen for auth changes (login, logout, refresh)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (session) {
-                updateUserState(session);
-            } else {
-                setUser(defaultUser);
-            }
-            setIsLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
     const updateUserState = (session: Session) => {
         setUser({
             id: session.user.id,
@@ -61,6 +41,52 @@ export function UserProvider({ children }: { children: ReactNode }) {
             isLoggedIn: true,
         });
     };
+
+    useEffect(() => {
+        let mounted = true;
+
+        const initializeAuth = async () => {
+            try {
+                // 1. Check initial session
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) {
+                    Logger.error('Error getting session:', error.message);
+                }
+
+                if (mounted) {
+                    if (session) {
+                        Logger.log('Session restored for:', session.user.email);
+                        updateUserState(session);
+                    } else {
+                        Logger.log('No active session on load');
+                        setUser(defaultUser);
+                    }
+                }
+            } catch (e) {
+                Logger.error('Auth initialization error:', e);
+            } finally {
+                if (mounted) setIsLoading(false);
+            }
+        };
+
+        initializeAuth();
+
+        // 2. Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            Logger.log('Auth event:', _event);
+            if (session) {
+                updateUserState(session);
+            } else {
+                setUser(defaultUser);
+            }
+            setIsLoading(false);
+        });
+
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
+    }, []);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true);
@@ -89,13 +115,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         setIsLoading(true);
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut();
+        if (error) Logger.error('Logout error:', error);
         setUser(defaultUser);
         setIsLoading(false);
     };
 
     const updateUser = async (data: Partial<UserData>) => {
-        // For simple metadata updates
         if (data.name) {
             const { error } = await supabase.auth.updateUser({
                 data: { full_name: data.name }
@@ -107,7 +133,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <UserContext.Provider value={{ user, isLoading, login, signup, logout, updateUser }}>
+        <UserContext.Provider value={{
+            user,
+            isLoading,
+            isGuest: !user.isLoggedIn,
+            login,
+            signup,
+            logout,
+            updateUser
+        }}>
             {children}
         </UserContext.Provider>
     );

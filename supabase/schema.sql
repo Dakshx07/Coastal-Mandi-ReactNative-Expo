@@ -49,11 +49,18 @@ alter table public.species enable row level security;
 alter table public.harbours enable row level security;
 alter table public.daily_prices enable row level security;
 
--- 4. Create Policies (Open Read, Admin Write)
+-- 4. Create Policies
 -- Allow anyone to READ data (public app)
 create policy "Allow public read access" on public.species for select using (true);
 create policy "Allow public read access" on public.harbours for select using (true);
 create policy "Allow public read access" on public.daily_prices for select using (true);
+
+-- Allow Authenticated Users to INSERT/UPDATE prices (For Admin App)
+-- In a real prod app, you'd check for a specific 'admin' role or email.
+-- For Phase 1, any logged-in user (which is just the Admin) can edit.
+create policy "Allow auth insert" on public.daily_prices for insert with check (auth.role() = 'authenticated');
+create policy "Allow auth update" on public.daily_prices for update using (auth.role() = 'authenticated');
+
 
 -- 5. SEED DATA -------------------------------------------------------------
 

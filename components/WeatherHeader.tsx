@@ -1,17 +1,56 @@
 import React, { memo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
 
 interface WeatherHeaderProps {
     harbour: string;
-    weather: { temp: number; condition: string; wind: number; humidity: number };
+    weather: { temp: number; condition: string; wind: number; humidity: number } | null;
     today: string;
     speciesCount: number;
 }
 
 const WeatherHeader = ({ harbour, weather, today, speciesCount }: WeatherHeaderProps) => {
+    if (!weather) {
+        return (
+            <MotiView
+                from={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={styles.headerContent}
+            >
+                {/* Skeleton / Loading State matching the real design */}
+                <LinearGradient
+                    colors={['#0ea5e9', '#0284c7', '#0369a1']} // Keep theme
+                    style={[styles.weatherCard, { opacity: 0.8 }]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                    <View style={styles.weatherRow}>
+                        <View>
+                            {/* Date Placeholder */}
+                            <View style={{ width: 100, height: 14, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, marginBottom: 6 }} />
+                            {/* Location Placeholder */}
+                            <View style={{ width: 140, height: 20, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4 }} />
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <ActivityIndicator size="small" color="#fcd34d" />
+                        </View>
+                    </View>
+                    <View style={styles.weatherDetails}>
+                        <View style={{ width: 80, height: 24, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }} />
+                        <View style={{ width: 80, height: 24, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }} />
+                    </View>
+                </LinearGradient>
+
+                {/* List Title Skeleton */}
+                <View style={styles.listHeader}>
+                    <View style={{ width: 100, height: 12, backgroundColor: '#e2e8f0', borderRadius: 4 }} />
+                    <View style={{ width: 60, height: 12, backgroundColor: '#e2e8f0', borderRadius: 4 }} />
+                </View>
+            </MotiView>
+        );
+    }
     return (
         <MotiView
             from={{ opacity: 0, translateY: -20 }}

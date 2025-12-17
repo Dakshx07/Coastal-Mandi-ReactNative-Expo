@@ -46,7 +46,14 @@ export default function LoginScreen() {
             alert(error.message);
         } else {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.replace('/(tabs)');
+
+            // ADMIN REDIRECT LOGIC
+            const ADMIN_EMAILS = ['dakshhiran@gmail.com', 'admin@coastalmandi.in'];
+            if (email && ADMIN_EMAILS.includes(email.toLowerCase())) {
+                router.replace('/admin');
+            } else {
+                router.replace('/(tabs)');
+            }
         }
     };
 

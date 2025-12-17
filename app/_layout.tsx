@@ -66,7 +66,7 @@ function RootLayoutNav() {
         animation: 'default',
       }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true }} />
         <Stack.Screen name="signup" options={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true }} />
       </Stack>
