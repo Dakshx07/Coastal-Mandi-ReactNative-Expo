@@ -22,6 +22,8 @@ const HARBOURS = [
     'Mangalore Old Port',
     'Sassoon Dock',
     'Chennai Kasimedu',
+    'Veraval Harbour',
+    'Paradip Port',
 ];
 
 export default function HarbourSelector({ selectedHarbour, onSelect }: HarbourSelectorProps) {

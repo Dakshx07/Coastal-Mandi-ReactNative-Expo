@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MotiView } from 'moti';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
@@ -29,93 +28,62 @@ export default function WelcomeScreen() {
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
+
+            {/* Main Deep Ocean Background */}
             <LinearGradient
-                colors={['#0b0f19', '#111827', '#0f172a']}
+                colors={['#020617', '#0f172a', '#172554']}
                 style={StyleSheet.absoluteFill}
             />
 
-            {/* Background decorative elements */}
-            <View style={styles.bgDecor}>
-                <MotiView
-                    from={{ opacity: 0.1 }}
-                    animate={{ opacity: 0.2 }}
-                    transition={{ type: 'timing', duration: 3000, loop: true }}
-                    style={styles.bgCircle1}
-                />
-                <MotiView
-                    from={{ opacity: 0.05 }}
-                    animate={{ opacity: 0.15 }}
-                    transition={{ type: 'timing', duration: 4000, loop: true, delay: 1000 }}
-                    style={styles.bgCircle2}
-                />
+            {/* Simulated "Wave" Elements (Safe Static Views) */}
+            <View style={styles.waveContainer}>
+                {/* Back Wave */}
+                <View style={[styles.wave, styles.waveBack]} />
+                {/* Front Wave */}
+                <View style={[styles.wave, styles.waveFront]} />
             </View>
 
             <View style={styles.content}>
                 {/* Language Selector */}
-                <View style={styles.topBar}>
-                    <View style={styles.languageBtn}>
-                        <Text style={styles.flagEmoji}>🇺🇸</Text>
-                        <Text style={styles.languageText}>English</Text>
-                        <Ionicons name="chevron-down" size={14} color="#94a3b8" />
+                {/* Top Spacer to keep layout consistent */}
+                <View style={{ height: 40 }} />
+
+                {/* Logo */}
+                <View style={styles.logoContainer}>
+                    <View style={styles.logoCircle}>
+                        <LinearGradient
+                            colors={['#3b82f6', '#2563eb']}
+                            style={StyleSheet.absoluteFill}
+                        />
+                        <Ionicons name="boat" size={56} color="white" />
                     </View>
                 </View>
 
-                {/* Logo Section */}
-                <MotiView
-                    from={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: 'timing', duration: 800 }}
-                    style={styles.logoContainer}
-                >
-                    <View style={styles.logoCircle}>
-                        <Ionicons name="boat" size={48} color="#22d3ee" />
-                    </View>
-                </MotiView>
-
                 {/* Badge */}
-                <MotiView
-                    from={{ opacity: 0, translateY: 20 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ delay: 200 }}
-                    style={styles.badgeContainer}
-                >
+                <View style={styles.badgeContainer}>
                     <View style={styles.badge}>
-                        <Ionicons name="globe-outline" size={14} color="#3b82f6" />
-                        <Text style={styles.badgeText}>COASTAL INTELLIGENCE NETWORK</Text>
+                        <Ionicons name="globe-outline" size={16} color="#22d3ee" />
+                        <Text style={styles.badgeText}>COASTAL INTELLIGENCE</Text>
                     </View>
-                </MotiView>
+                </View>
 
-                {/* Main Headline */}
-                <MotiView
-                    from={{ opacity: 0, translateY: 30 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ delay: 400 }}
-                    style={styles.headlineContainer}
-                >
+                {/* Headline */}
+                <View style={styles.headlineContainer}>
                     <Text style={styles.headline}>
                         The Future of{'\n'}
                         <Text style={styles.headlineHighlight}>Market Rates</Text>
                     </Text>
-                </MotiView>
+                </View>
 
                 {/* Subtitle */}
-                <MotiView
-                    from={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 600 }}
-                >
+                <View>
                     <Text style={styles.subtitle}>
                         Empowering fishermen with real-time data, AI predictions, and trusted pricing.
                     </Text>
-                </MotiView>
+                </View>
 
-                {/* Feature Pills */}
-                <MotiView
-                    from={{ opacity: 0, translateY: 20 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ delay: 800 }}
-                    style={styles.pillsContainer}
-                >
+                {/* Pills */}
+                <View style={styles.pillsContainer}>
                     <View style={styles.featurePill}>
                         <Ionicons name="trending-up" size={16} color="#22c55e" />
                         <Text style={styles.pillText}>Live Trends</Text>
@@ -124,36 +92,28 @@ export default function WelcomeScreen() {
                         <Ionicons name="shield-checkmark" size={16} color="#3b82f6" />
                         <Text style={styles.pillText}>Verified Data</Text>
                     </View>
-                </MotiView>
+                </View>
 
-                {/* Spacer */}
                 <View style={{ flex: 1 }} />
 
-                {/* CTA Buttons */}
-                <MotiView
-                    from={{ opacity: 0, translateY: 40 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ delay: 1000 }}
-                    style={styles.ctaContainer}
-                >
-                    {/* Get Started Button */}
+                {/* CTA Buttons - Tighter Spacing */}
+                <View style={styles.ctaContainer}>
                     <TouchableOpacity
                         onPress={handleGetStarted}
-                        activeOpacity={0.9}
-                        style={styles.primaryBtnWrapper}
+                        activeOpacity={0.85}
                     >
-                        <LinearGradient
-                            colors={['#0ea5e9', '#3b82f6']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.primaryBtn}
-                        >
-                            <Text style={styles.primaryBtnText}>Get Started</Text>
-                            <Ionicons name="arrow-forward" size={20} color="white" />
-                        </LinearGradient>
+                        <View style={styles.primaryBtnWrapper}>
+                            <View style={styles.primaryBtn}>
+                                <LinearGradient
+                                    colors={['#0ea5e9', '#0284c7']}
+                                    style={StyleSheet.absoluteFill}
+                                />
+                                <Text style={styles.primaryBtnText}>Get Started</Text>
+                                <Ionicons name="arrow-forward" size={20} color="white" />
+                            </View>
+                        </View>
                     </TouchableOpacity>
 
-                    {/* Sign In Link */}
                     <TouchableOpacity
                         onPress={handleSignIn}
                         style={styles.secondaryBtn}
@@ -163,7 +123,7 @@ export default function WelcomeScreen() {
                             Already have an account? <Text style={styles.signInHighlight}>Sign In</Text>
                         </Text>
                     </TouchableOpacity>
-                </MotiView>
+                </View>
             </View>
         </View>
     );
@@ -172,103 +132,97 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0b0f19',
+        backgroundColor: '#020617',
     },
-    bgDecor: {
+    waveContainer: {
         ...StyleSheet.absoluteFillObject,
         overflow: 'hidden',
     },
-    bgCircle1: {
+    wave: {
         position: 'absolute',
-        width: 400,
-        height: 400,
-        borderRadius: 200,
-        backgroundColor: '#3b82f6',
-        top: -100,
-        right: -150,
+        width: width * 2,
+        height: width * 2,
+        borderRadius: width,
+        left: -width / 2,
+        bottom: -width * 1.2,
     },
-    bgCircle2: {
-        position: 'absolute',
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-        backgroundColor: '#06b6d4',
-        bottom: 100,
-        left: -100,
+    waveBack: {
+        backgroundColor: 'rgba(34, 211, 238, 0.05)', // Cyan tint
+        transform: [{ translateX: -50 }, { translateY: -50 }],
+    },
+    waveFront: {
+        backgroundColor: 'rgba(59, 130, 246, 0.08)', // Blue tint
+        bottom: -width * 1.3,
+        transform: [{ translateX: 50 }],
     },
     content: {
         flex: 1,
-        paddingHorizontal: 24,
-        paddingTop: 60,
+        paddingHorizontal: 28,
+        paddingTop: 50,
         paddingBottom: 40,
     },
     topBar: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        marginBottom: 40,
+        marginBottom: 30,
     },
     languageBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1e293b',
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 20,
         gap: 6,
         borderWidth: 1,
-        borderColor: '#334155',
-    },
-    flagEmoji: {
-        fontSize: 14,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
     },
     languageText: {
         color: '#f8fafc',
         fontSize: 13,
-        fontFamily: 'Outfit_500Medium',
+        fontFamily: 'Outfit_600SemiBold',
     },
     logoContainer: {
         alignItems: 'center',
-        marginBottom: 32,
+        marginBottom: 30,
     },
     logoCircle: {
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: '#1e293b',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#334155',
         shadowColor: '#22d3ee',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.5,
         shadowRadius: 30,
         elevation: 10,
+        overflow: 'hidden',
     },
     badgeContainer: {
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 20,
     },
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1e293b',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 24,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
         gap: 8,
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: 'rgba(34, 211, 238, 0.3)',
+        backgroundColor: 'rgba(15, 23, 42, 0.7)',
     },
     badgeText: {
         color: '#94a3b8',
-        fontSize: 11,
+        fontSize: 10,
         fontFamily: 'Outfit_700Bold',
         letterSpacing: 1,
     },
     headlineContainer: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 16,
     },
     headline: {
         fontSize: 36,
@@ -279,72 +233,77 @@ const styles = StyleSheet.create({
     },
     headlineHighlight: {
         color: '#22d3ee',
+        fontSize: 36,
+        fontFamily: 'Outfit_700Bold',
     },
     subtitle: {
-        color: '#94a3b8',
-        fontSize: 16,
+        color: '#cbd5e1',
+        fontSize: 15,
         fontFamily: 'Outfit_400Regular',
         textAlign: 'center',
-        lineHeight: 26,
+        lineHeight: 22,
         paddingHorizontal: 20,
     },
     pillsContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 16,
-        marginTop: 32,
+        gap: 12,
+        marginTop: 24,
     },
     featurePill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1e293b',
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 24,
         gap: 8,
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
     },
     pillText: {
         color: '#f8fafc',
-        fontSize: 14,
-        fontFamily: 'Outfit_500Medium',
+        fontSize: 13,
+        fontFamily: 'Outfit_600SemiBold',
     },
     ctaContainer: {
-        gap: 16,
+        gap: 14,
     },
     primaryBtnWrapper: {
-        shadowColor: '#3b82f6',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        elevation: 10,
+        position: 'relative',
     },
     primaryBtn: {
         flexDirection: 'row',
-        height: 60,
+        height: 56,
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
+        overflow: 'hidden',
+        shadowColor: '#0ea5e9',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        elevation: 8,
     },
     primaryBtnText: {
         color: 'white',
         fontSize: 18,
         fontFamily: 'Outfit_700Bold',
+        zIndex: 1,
     },
     secondaryBtn: {
-        height: 50,
+        height: 48,
         alignItems: 'center',
         justifyContent: 'center',
     },
     secondaryBtnText: {
         color: '#94a3b8',
-        fontSize: 15,
+        fontSize: 14,
         fontFamily: 'Outfit_400Regular',
     },
     signInHighlight: {
-        color: '#3b82f6',
+        color: '#22d3ee',
         fontFamily: 'Outfit_700Bold',
     },
 });

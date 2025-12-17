@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 
 import AppHeader from '@/components/AppHeader';
 import { analyzeMarket, MarketAnalysis, RateData } from '@/services/ai';
+import { DataService } from '@/services/data';
 
 const HARBOURS = [
     'Kochi Harbour',
@@ -22,56 +23,9 @@ const HARBOURS = [
     'Mangalore Old Port',
     'Sassoon Dock',
     'Chennai Kasimedu',
+    'Veraval Harbour',
+    'Paradip Port'
 ];
-
-// Rates data per harbour
-const HARBOUR_RATES: Record<string, RateData[]> = {
-    'Kochi Harbour': [
-        { name: 'Seer Fish', price: 607, trend: 'down', trendPercentage: 12.79 },
-        { name: 'Pomfret (Black)', price: 602, trend: 'down', trendPercentage: 10.81 },
-        { name: 'Sardine', price: 141, trend: 'up', trendPercentage: 5.2 },
-        { name: 'Mackerel', price: 230, trend: 'up', trendPercentage: 8.4 },
-        { name: 'Prawns', price: 386, trend: 'down', trendPercentage: 2.1 },
-        { name: 'Crab', price: 455, trend: 'up', trendPercentage: 3.2 },
-        { name: 'Tuna', price: 280, trend: 'up', trendPercentage: 4.5 },
-    ],
-    'Vizag Fishing Harbour': [
-        { name: 'Seer Fish', price: 658, trend: 'up', trendPercentage: 8.4 },
-        { name: 'Pomfret (Black)', price: 667, trend: 'up', trendPercentage: 10.8 },
-        { name: 'Sardine', price: 118, trend: 'down', trendPercentage: 16.3 },
-        { name: 'Mackerel', price: 188, trend: 'down', trendPercentage: 18.3 },
-        { name: 'Prawns', price: 421, trend: 'up', trendPercentage: 9.1 },
-        { name: 'Crab', price: 398, trend: 'down', trendPercentage: 12.5 },
-        { name: 'Tuna', price: 262, trend: 'down', trendPercentage: 6.4 },
-    ],
-    'Mangalore Old Port': [
-        { name: 'Seer Fish', price: 580, trend: 'down', trendPercentage: 4.4 },
-        { name: 'Pomfret (Black)', price: 590, trend: 'down', trendPercentage: 2.0 },
-        { name: 'Sardine', price: 155, trend: 'up', trendPercentage: 9.9 },
-        { name: 'Mackerel', price: 245, trend: 'up', trendPercentage: 6.5 },
-        { name: 'Prawns', price: 365, trend: 'down', trendPercentage: 5.4 },
-        { name: 'Crab', price: 478, trend: 'up', trendPercentage: 5.1 },
-        { name: 'Tuna', price: 295, trend: 'up', trendPercentage: 5.4 },
-    ],
-    'Sassoon Dock': [
-        { name: 'Seer Fish', price: 695, trend: 'up', trendPercentage: 14.5 },
-        { name: 'Pomfret (Black)', price: 720, trend: 'up', trendPercentage: 19.6 },
-        { name: 'Sardine', price: 168, trend: 'up', trendPercentage: 19.1 },
-        { name: 'Mackerel', price: 268, trend: 'up', trendPercentage: 16.5 },
-        { name: 'Prawns', price: 425, trend: 'up', trendPercentage: 10.1 },
-        { name: 'Crab', price: 512, trend: 'up', trendPercentage: 12.5 },
-        { name: 'Tuna', price: 315, trend: 'up', trendPercentage: 12.5 },
-    ],
-    'Chennai Kasimedu': [
-        { name: 'Seer Fish', price: 625, trend: 'up', trendPercentage: 3.0 },
-        { name: 'Pomfret (Black)', price: 612, trend: 'up', trendPercentage: 1.7 },
-        { name: 'Sardine', price: 125, trend: 'down', trendPercentage: 11.3 },
-        { name: 'Mackerel', price: 198, trend: 'down', trendPercentage: 13.9 },
-        { name: 'Prawns', price: 378, trend: 'down', trendPercentage: 2.1 },
-        { name: 'Crab', price: 435, trend: 'down', trendPercentage: 4.4 },
-        { name: 'Tuna', price: 248, trend: 'down', trendPercentage: 11.4 },
-    ],
-};
 
 const AI_LOADING_MESSAGES = [
     'Analyzing market trends...',
@@ -90,7 +44,38 @@ export default function InsightsScreen() {
     const [error, setError] = useState<string | null>(null);
     const [analysisKey, setAnalysisKey] = useState(0);
 
-    const currentRates = useMemo(() => HARBOUR_RATES[selectedHarbour] || [], [selectedHarbour]);
+    // State for Real Data
+    const [currentRates, setCurrentRates] = useState<RateData[]>([]);
+    const [fetchingData, setFetchingData] = useState(false);
+
+    // Fetch Data when Harbour Changes
+    useEffect(() => {
+        let isMounted = true;
+        const fetchData = async () => {
+            setFetchingData(true);
+            try {
+                // Fetch from our real database service
+                const data = await DataService.getMarketData(selectedHarbour);
+
+                if (isMounted) {
+                    // Transform to RateData interface expected by AI service
+                    const aiRates: RateData[] = data.map(item => ({
+                        name: item.name,
+                        price: item.price,
+                        trend: item.trend,
+                        trendPercentage: item.trendPercentage
+                    }));
+                    setCurrentRates(aiRates);
+                }
+            } catch (e) {
+                console.error("Failed to fetch rates for analysis", e);
+            } finally {
+                if (isMounted) setFetchingData(false);
+            }
+        };
+        fetchData();
+        return () => { isMounted = false; };
+    }, [selectedHarbour]);
 
     const handleHarbourChange = (harbour: string) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

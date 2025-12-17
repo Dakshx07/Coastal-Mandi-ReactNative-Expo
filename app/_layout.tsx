@@ -1,10 +1,10 @@
+import 'react-native-reanimated';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { LogBox } from 'react-native';
-import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import {
   Outfit_400Regular,
@@ -12,15 +12,23 @@ import {
   Outfit_600SemiBold,
   Outfit_700Bold
 } from '@expo-google-fonts/outfit';
+import {
+  Cinzel_400Regular,
+  Cinzel_700Bold
+} from '@expo-google-fonts/cinzel';
+import {
+  Montserrat_400Regular,
+  Montserrat_600SemiBold
+} from '@expo-google-fonts/montserrat';
 
 import { CartProvider } from '@/contexts/CartContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { UserProvider } from '@/contexts/UserContext';
 
-// Suppress warnings from dependencies
+// Suppress warnings
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
-  'Non-serializable values were found in the navigation state',
+  'Non-serializable values were found',
 ]);
 
 export {
@@ -52,45 +60,15 @@ function RootLayoutNav() {
     <NavThemeProvider value={navTheme}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
+        headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.text,
-        headerTitleStyle: {
-          fontFamily: 'Outfit_700Bold',
-        },
-        gestureEnabled: false,
+        gestureEnabled: true, // Enabled global gestures
+        animation: 'default',
       }}>
-        <Stack.Screen
-          name="index"
-          options={{
-            headerShown: false,
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            headerShown: false,
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="login"
-          options={{
-            headerShown: false,
-            animation: 'fade',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen
-          name="signup"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-            gestureEnabled: true,
-          }}
-        />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="signup" options={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true }} />
       </Stack>
     </NavThemeProvider>
   );
@@ -102,6 +80,10 @@ export default function RootLayout() {
     Outfit_500Medium,
     Outfit_600SemiBold,
     Outfit_700Bold,
+    Montserrat_400Regular,
+    Montserrat_600SemiBold,
+    Cinzel_400Regular,
+    Cinzel_700Bold
   });
 
   useEffect(() => {

@@ -9,7 +9,11 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@ant-design/react-native": "^5.4.3",
+    "@expo-google-fonts/cinzel": "^0.4.2",
+    "@expo-google-fonts/montserrat": "^0.4.2",
     "@expo-google-fonts/outfit": "^0.4.3",
+    "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@google/generative-ai": "^0.24.1",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -43,6 +47,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "babel-preset-expo": "^54.0.8",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
   },

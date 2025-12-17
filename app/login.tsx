@@ -8,94 +8,110 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    ActivityIndicator,
+    Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 
 import { useUser } from '@/contexts/UserContext';
 
+const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    // Removed focusedInput state to prevent re-renders on focus
     const { login } = useUser();
 
-    const handleLogin = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Extract name from email (before @)
-        const name = email.split('@')[0] || 'Coastal User';
-        login(name, email); // Store user data
-        router.replace('/(tabs)');
+    const handleLogin = async () => {
+        if (!email || !password) {
+            alert('Please enter both email and password');
+            return;
+        }
+
+        setIsLoading(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+        const { error } = await login(email, password);
+
+        setIsLoading(false);
+        if (error) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            alert(error.message);
+        } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            router.replace('/(tabs)');
+        }
     };
 
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
+
             <LinearGradient
-                colors={['#0c1929', '#1e3a5f', '#0ea5e9']}
-                locations={[0, 0.5, 1]}
+                colors={['#0f172a', '#1e40af', '#3b82f6']}
+                locations={[0, 0.7, 1]}
                 style={StyleSheet.absoluteFill}
             />
 
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={styles.keyboardView}
             >
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
-                    keyboardShouldPersistTaps="handled"
+                    keyboardShouldPersistTaps="always" // CHANGED: always persist taps
                     showsVerticalScrollIndicator={false}
                 >
-
-
-                    {/* Icon & Title */}
-                    <MotiView
-                        from={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 100, type: 'timing', duration: 500 }}
-                        style={styles.header}
-                    >
-                        <View style={styles.iconCircle}>
-                            <Ionicons name="boat" size={36} color="#0ea5e9" />
+                    <View style={styles.contentContainer}>
+                        <View style={styles.header}>
+                            <View style={styles.iconCircle}>
+                                <LinearGradient
+                                    colors={['#60a5fa', '#3b82f6']}
+                                    style={StyleSheet.absoluteFill}
+                                />
+                                <Ionicons name="boat" size={40} color="white" />
+                            </View>
+                            <Text style={styles.title}>Welcome Back</Text>
+                            <Text style={styles.subtitle}>Sign in to continue to Coastal Mandi</Text>
                         </View>
-                        <Text style={styles.title}>Welcome Back</Text>
-                        <Text style={styles.subtitle}>Sign in to continue to Coastal Mandi</Text>
-                    </MotiView>
 
-                    {/* Form */}
-                    <MotiView
-                        from={{ opacity: 0, translateY: 30 }}
-                        animate={{ opacity: 1, translateY: 0 }}
-                        transition={{ delay: 200, type: 'timing', duration: 500 }}
-                        style={styles.form}
-                    >
-                        <View style={styles.inputGroup}>
+                        <View style={styles.form}>
+                            {/* Email Input */}
                             <View style={styles.inputWrapper}>
-                                <Ionicons name="mail-outline" size={20} color="#7dd3fc" />
+                                <Ionicons
+                                    name="mail-outline"
+                                    size={20}
+                                    color="white"
+                                />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Email Address"
-                                    placeholderTextColor="#7dd3fc"
+                                    placeholderTextColor="rgba(255,255,255,0.6)"
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     value={email}
                                     onChangeText={setEmail}
                                 />
                             </View>
-                        </View>
 
-                        <View style={styles.inputGroup}>
-                            <View style={styles.inputWrapper}>
-                                <Ionicons name="lock-closed-outline" size={20} color="#7dd3fc" />
+                            {/* Password Input */}
+                            <View style={[styles.inputWrapper, { marginTop: 12 }]}>
+                                <Ionicons
+                                    name="lock-closed-outline"
+                                    size={20}
+                                    color="white"
+                                />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Password"
-                                    placeholderTextColor="#7dd3fc"
+                                    placeholderTextColor="rgba(255,255,255,0.6)"
                                     secureTextEntry={!showPassword}
                                     value={password}
                                     onChangeText={setPassword}
@@ -104,40 +120,48 @@ export default function LoginScreen() {
                                     <Ionicons
                                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                                         size={20}
-                                        color="#7dd3fc"
+                                        color={'rgba(255,255,255,0.8)'}
                                     />
                                 </TouchableOpacity>
                             </View>
+
+                            <TouchableOpacity style={styles.forgotBtn}>
+                                <Text style={styles.forgotText}>Forgot password?</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={handleLogin}
+                                activeOpacity={0.85}
+                                disabled={isLoading}
+                            >
+                                <View style={styles.submitBtn}>
+                                    <LinearGradient
+                                        colors={['#60a5fa', '#2563eb']}
+                                        style={StyleSheet.absoluteFill}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                    />
+                                    {isLoading ? (
+                                        <ActivityIndicator color="white" />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.submitBtnText}>Sign In</Text>
+                                            <Ionicons name="arrow-forward" size={20} color="white" />
+                                        </>
+                                    )}
+                                </View>
+                            </TouchableOpacity>
                         </View>
+                    </View>
 
-                        <TouchableOpacity style={styles.forgotBtn}>
-                            <Text style={styles.forgotText}>Forgot password?</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.submitBtn}
-                            onPress={handleLogin}
-                            activeOpacity={0.9}
-                        >
-                            <Text style={styles.submitBtnText}>Sign In</Text>
-                            <Ionicons name="arrow-forward" size={20} color="#0c1929" />
-                        </TouchableOpacity>
-                    </MotiView>
-
-                    {/* Footer */}
-                    <MotiView
-                        from={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 400, type: 'timing', duration: 500 }}
-                        style={styles.footer}
-                    >
+                    <View style={styles.footer}>
                         <TouchableOpacity onPress={() => router.replace('/signup')}>
                             <Text style={styles.footerText}>
                                 Don't have an account?{' '}
                                 <Text style={styles.footerLink}>Sign Up</Text>
                             </Text>
                         </TouchableOpacity>
-                    </MotiView>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </View>
@@ -147,100 +171,109 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0c1929',
+        backgroundColor: '#0f172a',
     },
     keyboardView: {
         flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: 24,
-        paddingTop: 60,
-        paddingBottom: 40,
+        justifyContent: 'center',
+        paddingHorizontal: 28,
+        paddingVertical: 40,
+        minHeight: height,
     },
-    backBtn: {
-        // ... (removed)
+    contentContainer: {
+        width: '100%',
+        maxWidth: 400,
+        alignSelf: 'center',
     },
     header: {
         alignItems: 'center',
         marginBottom: 40,
-        marginTop: 20,
     },
     iconCircle: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: 'rgba(14, 165, 233, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
-        borderWidth: 2,
-        borderColor: 'rgba(14, 165, 233, 0.3)',
+        overflow: 'hidden',
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+        elevation: 10,
     },
     title: {
         color: 'white',
-        fontSize: 26,
+        fontSize: 30,
         fontFamily: 'Outfit_700Bold',
         marginBottom: 8,
     },
     subtitle: {
-        color: '#7dd3fc',
-        fontSize: 15,
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 16,
         fontFamily: 'Outfit_400Regular',
     },
     form: {
-        gap: 16,
-    },
-    inputGroup: {
-        gap: 8,
+        gap: 0,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        borderRadius: 14,
+        borderRadius: 16,
         paddingHorizontal: 16,
-        height: 56,
+        height: 60,
         gap: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: 'rgba(255, 255, 255, 0.2)', // Static border
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     input: {
         flex: 1,
         color: 'white',
         fontSize: 16,
-        fontFamily: 'Outfit_400Regular',
+        fontFamily: 'Outfit_500Medium',
     },
     forgotBtn: {
         alignSelf: 'flex-end',
+        marginTop: 14,
+        marginBottom: 24,
     },
     forgotText: {
-        color: '#7dd3fc',
-        fontSize: 13,
-        fontFamily: 'Outfit_500Medium',
+        color: 'rgba(255,255,255,0.9)',
+        fontSize: 14,
+        fontFamily: 'Outfit_600SemiBold',
     },
     submitBtn: {
         flexDirection: 'row',
-        backgroundColor: '#0ea5e9',
-        height: 56,
-        borderRadius: 14,
+        height: 58,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
-        marginTop: 8,
+        gap: 10,
+        overflow: 'hidden',
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
     },
     submitBtnText: {
-        color: '#0c1929',
-        fontSize: 17,
+        color: 'white',
+        fontSize: 18,
         fontFamily: 'Outfit_700Bold',
+        zIndex: 1,
     },
     footer: {
-        marginTop: 32,
+        marginTop: 40,
         alignItems: 'center',
     },
     footerText: {
-        color: '#7dd3fc',
-        fontSize: 14,
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 15,
         fontFamily: 'Outfit_400Regular',
     },
     footerLink: {

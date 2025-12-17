@@ -17,6 +17,7 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
+import Colors from '@/constants/Colors';
 
 import AppHeader from '@/components/AppHeader';
 import SpeciesCard from '@/components/SpeciesCard';
@@ -39,122 +40,30 @@ interface SpeciesData {
   trustScore?: number;
 }
 
-// Weather data per harbour
+// Weather data per harbour (Static for now)
 const WEATHER_DATA: Record<string, { temp: number; condition: string; wind: number; humidity: number }> = {
   'Kochi Harbour': { temp: 29, condition: 'Humid', wind: 14, humidity: 78 },
   'Vizag Fishing Harbour': { temp: 31, condition: 'Sunny', wind: 18, humidity: 65 },
   'Mangalore Old Port': { temp: 28, condition: 'Cloudy', wind: 12, humidity: 82 },
   'Sassoon Dock': { temp: 32, condition: 'Hot', wind: 8, humidity: 55 },
   'Chennai Kasimedu': { temp: 33, condition: 'Warm', wind: 16, humidity: 70 },
+  'Veraval Harbour': { temp: 34, condition: 'Sunny', wind: 20, humidity: 45 },
+  'Paradip Port': { temp: 30, condition: 'Windy', wind: 25, humidity: 75 },
 };
 
-// All species with local names and images
-const ALL_SPECIES = [
-  { name: 'Seer Fish', scientificName: 'Neymeen / Surmai', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
-  { name: 'Pomfret (Black)', scientificName: 'Avoli / Halwa', imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200' },
-  { name: 'Crab', scientificName: 'Njandu / Kekda', imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200' },
-  { name: 'Prawns (Medium)', scientificName: 'Chemmeen', imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200' },
-  { name: 'Red Snapper', scientificName: 'Chempalli', imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200' },
-  { name: 'Tuna', scientificName: 'Choora', imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200' },
-  { name: 'Mackerel', scientificName: 'Ayala', imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200' },
-  { name: 'Sardine', scientificName: 'Mathi / Chaala', imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200' },
-  { name: 'Anchovies', scientificName: 'Netholi / Kozhuva', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
-  { name: 'King Fish', scientificName: 'Ney Meen', imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200' },
-  // Additional species to ensure list is scrollable
-  { name: 'Katla', scientificName: 'Katla', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
-  { name: 'Rohu', scientificName: 'Rohu', imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
+// Fallback Data (used if API fails or empty)
+const FALLBACK_SPECIES = [
+  { id: 'f1', name: 'Seer Fish', scientificName: 'Neymeen', price: 600, trend: 'up', trendPercentage: 5, imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200' },
+  { id: 'f2', name: 'Mackerel', scientificName: 'Ayala', price: 220, trend: 'down', trendPercentage: 2, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200' },
+  { id: 'f3', name: 'Sardine', scientificName: 'Mathi', price: 140, trend: 'up', trendPercentage: 8, imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=200' },
+  { id: 'f4', name: 'Pomfret (Black)', scientificName: 'Avoli', price: 580, trend: 'down', trendPercentage: 4, imageUrl: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200' },
+  { id: 'f5', name: 'Prawns', scientificName: 'Chemmeen', price: 420, trend: 'up', trendPercentage: 12, imageUrl: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=200' },
+  { id: 'f6', name: 'Tuna', scientificName: 'Choora', price: 280, trend: 'stable', trendPercentage: 0, imageUrl: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=200' },
+  { id: 'f7', name: 'Red Snapper', scientificName: 'Chempalli', price: 390, trend: 'up', trendPercentage: 6, imageUrl: 'https://images.unsplash.com/photo-1535140875734-c8e082f5b51d?w=200' },
+  { id: 'f8', name: 'Crab', scientificName: 'Njandu', price: 450, trend: 'down', trendPercentage: 3, imageUrl: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=200' },
 ];
 
-// Cross-harbour prices for ALL fish
-const CROSS_HARBOUR_PRICES: Record<string, Record<string, { price: number; trend: 'up' | 'down'; trendPercentage: number }>> = {
-  'Seer Fish': {
-    'Kochi Harbour': { price: 607, trend: 'down', trendPercentage: 13 },
-    'Vizag Fishing Harbour': { price: 658, trend: 'down', trendPercentage: 4 },
-    'Mangalore Old Port': { price: 580, trend: 'up', trendPercentage: 6 },
-    'Sassoon Dock': { price: 695, trend: 'down', trendPercentage: 22 },
-    'Chennai Kasimedu': { price: 625, trend: 'down', trendPercentage: 10 },
-  },
-  'Pomfret (Black)': {
-    'Kochi Harbour': { price: 602, trend: 'down', trendPercentage: 11 },
-    'Vizag Fishing Harbour': { price: 667, trend: 'up', trendPercentage: 11 },
-    'Mangalore Old Port': { price: 590, trend: 'down', trendPercentage: 2 },
-    'Sassoon Dock': { price: 720, trend: 'up', trendPercentage: 20 },
-    'Chennai Kasimedu': { price: 612, trend: 'up', trendPercentage: 2 },
-  },
-  'Crab': {
-    'Kochi Harbour': { price: 455, trend: 'up', trendPercentage: 3 },
-    'Vizag Fishing Harbour': { price: 398, trend: 'down', trendPercentage: 13 },
-    'Mangalore Old Port': { price: 478, trend: 'up', trendPercentage: 5 },
-    'Sassoon Dock': { price: 512, trend: 'up', trendPercentage: 13 },
-    'Chennai Kasimedu': { price: 435, trend: 'down', trendPercentage: 4 },
-  },
-  'Prawns (Medium)': {
-    'Kochi Harbour': { price: 386, trend: 'down', trendPercentage: 1 },
-    'Vizag Fishing Harbour': { price: 421, trend: 'up', trendPercentage: 9 },
-    'Mangalore Old Port': { price: 365, trend: 'down', trendPercentage: 5 },
-    'Sassoon Dock': { price: 425, trend: 'up', trendPercentage: 10 },
-    'Chennai Kasimedu': { price: 378, trend: 'down', trendPercentage: 2 },
-  },
-  'Red Snapper': {
-    'Kochi Harbour': { price: 373, trend: 'up', trendPercentage: 1 },
-    'Vizag Fishing Harbour': { price: 342, trend: 'down', trendPercentage: 8 },
-    'Mangalore Old Port': { price: 398, trend: 'up', trendPercentage: 7 },
-    'Sassoon Dock': { price: 428, trend: 'up', trendPercentage: 15 },
-    'Chennai Kasimedu': { price: 352, trend: 'down', trendPercentage: 6 },
-  },
-  'Tuna': {
-    'Kochi Harbour': { price: 280, trend: 'up', trendPercentage: 5 },
-    'Vizag Fishing Harbour': { price: 262, trend: 'down', trendPercentage: 6 },
-    'Mangalore Old Port': { price: 295, trend: 'up', trendPercentage: 5 },
-    'Sassoon Dock': { price: 315, trend: 'up', trendPercentage: 13 },
-    'Chennai Kasimedu': { price: 248, trend: 'down', trendPercentage: 11 },
-  },
-  'Mackerel': {
-    'Kochi Harbour': { price: 230, trend: 'up', trendPercentage: 8 },
-    'Vizag Fishing Harbour': { price: 188, trend: 'down', trendPercentage: 18 },
-    'Mangalore Old Port': { price: 245, trend: 'up', trendPercentage: 7 },
-    'Sassoon Dock': { price: 268, trend: 'up', trendPercentage: 17 },
-    'Chennai Kasimedu': { price: 198, trend: 'down', trendPercentage: 14 },
-  },
-  'Sardine': {
-    'Kochi Harbour': { price: 141, trend: 'up', trendPercentage: 5 },
-    'Vizag Fishing Harbour': { price: 118, trend: 'down', trendPercentage: 16 },
-    'Mangalore Old Port': { price: 155, trend: 'up', trendPercentage: 10 },
-    'Sassoon Dock': { price: 168, trend: 'up', trendPercentage: 19 },
-    'Chennai Kasimedu': { price: 125, trend: 'down', trendPercentage: 11 },
-  },
-  'Anchovies': {
-    'Kochi Harbour': { price: 120, trend: 'up', trendPercentage: 3 },
-    'Vizag Fishing Harbour': { price: 95, trend: 'down', trendPercentage: 21 },
-    'Mangalore Old Port': { price: 132, trend: 'up', trendPercentage: 10 },
-    'Sassoon Dock': { price: 145, trend: 'up', trendPercentage: 21 },
-    'Chennai Kasimedu': { price: 108, trend: 'down', trendPercentage: 10 },
-  },
-  'King Fish': {
-    'Kochi Harbour': { price: 520, trend: 'down', trendPercentage: 3 },
-    'Vizag Fishing Harbour': { price: 485, trend: 'down', trendPercentage: 7 },
-    'Mangalore Old Port': { price: 548, trend: 'up', trendPercentage: 5 },
-    'Sassoon Dock': { price: 595, trend: 'up', trendPercentage: 14 },
-    'Chennai Kasimedu': { price: 498, trend: 'down', trendPercentage: 4 },
-  },
-};
-
-// Generate harbour-specific data
-const generateHarbourData = (harbour: string): SpeciesData[] => {
-  return ALL_SPECIES.map((species, idx) => {
-    const crossData = CROSS_HARBOUR_PRICES[species.name]?.[harbour];
-    return {
-      id: `${harbour.substring(0, 2).toLowerCase()}${idx + 1}`,
-      name: species.name,
-      scientificName: species.scientificName,
-      price: crossData?.price || 200,
-      trend: crossData?.trend || 'up',
-      trendPercentage: crossData?.trendPercentage || 5,
-      imageUrl: species.imageUrl,
-      trustScore: 85 + Math.floor(Math.random() * 10),
-    };
-  });
-};
+import { DataService } from '@/services/data';
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,27 +72,80 @@ export default function Dashboard() {
   const [selectedFish, setSelectedFish] = useState<SpeciesData | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
-  const searchInputRef = useRef<TextInput>(null);
 
+  // Data States
+  const [marketData, setMarketData] = useState<SpeciesData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [crossHarbourData, setCrossHarbourData] = useState<Record<string, any> | null>(null);
+  const [searchedFishName, setSearchedFishName] = useState<string | null>(null);
+
+  const searchInputRef = useRef<TextInput>(null);
   const cart = useCart();
 
-  // Get species data for current harbour
-  const currentSpecies = useMemo(() => generateHarbourData(selectedHarbour), [selectedHarbour]);
+  // Fetch Market Data when Harbour changes
+  useEffect(() => {
+    let isMounted = true;
+    const fetchData = async () => {
+      setIsLoading(true);
+      const data = await DataService.getMarketData(selectedHarbour);
+
+      if (isMounted) {
+        if (data && data.length > 0) {
+          setMarketData(data);
+        } else {
+          // Fallback if no data found (e.g. database empty)
+          setMarketData(FALLBACK_SPECIES as any);
+        }
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+    return () => { isMounted = false; };
+  }, [selectedHarbour]);
+
+  // Search & Cross Harbour Logic
+  useEffect(() => {
+    if (searchQuery.length < 3) {
+      setCrossHarbourData(null);
+      setSearchedFishName(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      // 1. Try to find a matching species name in our current list or API
+      // For simplicity, finding match in current ID list or partial name
+      const found = marketData.find(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      if (found) {
+        setSearchedFishName(found.name);
+        // 2. Fetch cross-harbour prices
+        const prices = await DataService.getCrossHarbourPrices(found.name);
+        setCrossHarbourData(prices);
+      }
+      setIsSearching(false);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, marketData]);
+
 
   // Ticker animation
   const tickerAnim = useRef(new Animated.Value(0)).current;
-  const TICKER_WIDTH = currentSpecies.length * 170;
+  const TICKER_WIDTH = marketData.length * 170;
 
   useEffect(() => {
     tickerAnim.setValue(0);
-    Animated.loop(
-      Animated.timing(tickerAnim, {
-        toValue: -TICKER_WIDTH,
-        duration: 20000,
-        useNativeDriver: true,
-      })
-    ).start();
-  }, [selectedHarbour, currentSpecies.length]);
+    if (marketData.length > 0) {
+      Animated.loop(
+        Animated.timing(tickerAnim, {
+          toValue: -TICKER_WIDTH,
+          duration: 20000,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+  }, [selectedHarbour, marketData.length]);
 
   const weather = WEATHER_DATA[selectedHarbour] || WEATHER_DATA['Kochi Harbour'];
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
@@ -211,22 +173,12 @@ export default function Dashboard() {
     });
   };
 
-  // Simple search without debounce to prevent keyboard issues
-  const filteredData = currentSpecies.filter(item =>
+  // Filter for local search
+  const filteredData = marketData.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.scientificName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Find matching fish for cross-harbour view
-  const searchedFish = useMemo(() => {
-    if (searchQuery.length < 2) return null;
-    return Object.keys(CROSS_HARBOUR_PRICES).find(f =>
-      f.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
-
-  const crossHarbourData = searchedFish ? CROSS_HARBOUR_PRICES[searchedFish] : null;
-  const fishInfo = searchedFish ? ALL_SPECIES.find(s => s.name === searchedFish) : null;
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -321,15 +273,12 @@ export default function Dashboard() {
                   >
                     {/* ... (Cross Harbour Content) ... */}
                     <View style={styles.crossHarbourHeader}>
-                      <Ionicons name="location" size={16} color="#a78bfa" />
+                      <Ionicons name="location" size={16} color={Colors.premium.gold} />
                       <Text style={styles.crossHarbourTitle}>PRICES ACROSS ALL HARBOURS</Text>
                     </View>
                     <View style={styles.crossHarbourFishRow}>
-                      <FontAwesome5 name="fish" size={14} color="#3b82f6" />
-                      <Text style={styles.crossHarbourFishName}>{searchedFish}</Text>
-                      {fishInfo && (
-                        <Text style={styles.crossHarbourFishSub}>({fishInfo.scientificName})</Text>
-                      )}
+                      <FontAwesome5 name="fish" size={14} color={Colors.premium.gold} />
+                      <Text style={styles.crossHarbourFishName}>{searchedFishName}</Text>
                     </View>
                     <View style={styles.crossHarbourGrid}>
                       {Object.entries(crossHarbourData).map(([harbour, data]) => (
@@ -348,7 +297,7 @@ export default function Dashboard() {
                           <Text style={styles.harbourPriceValue}>₹{data.price}</Text>
                           <Text style={[
                             styles.harbourPriceTrend,
-                            { color: data.trend === 'down' ? '#ef4444' : '#22c55e' }
+                            { color: data.trend === 'down' ? Colors.premium.red : Colors.premium.green }
                           ]}>
                             {data.trend === 'down' ? '↓' : '↑'} {data.trendPercentage}%
                           </Text>
@@ -381,7 +330,7 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0f19',
+    backgroundColor: Colors.premium.background,
   },
   safeArea: {
     flex: 1,
@@ -392,7 +341,7 @@ const styles = StyleSheet.create({
   },
   fixedHeader: {
     paddingBottom: 8,
-    backgroundColor: '#0b0f19',
+    backgroundColor: Colors.premium.background,
     zIndex: 10,
   },
   topControls: {
@@ -403,30 +352,30 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flexDirection: 'row',
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.premium.card,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.premium.border,
     marginHorizontal: 16,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
-    color: 'white',
+    color: Colors.premium.text,
     fontFamily: 'Outfit_400Regular',
     fontSize: 14,
   },
   crossHarbourCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.premium.card,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.premium.border,
     marginHorizontal: 16,
   },
   crossHarbourHeader: {
@@ -436,7 +385,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   crossHarbourTitle: {
-    color: '#94a3b8',
+    color: Colors.premium.textDim,
     fontSize: 10,
     letterSpacing: 1,
     fontFamily: 'Outfit_700Bold',
@@ -448,13 +397,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   crossHarbourFishName: {
-    color: 'white',
+    color: Colors.premium.text,
     fontSize: 16,
     fontFamily: 'Outfit_700Bold',
     marginBottom: 2,
   },
   crossHarbourFishSub: {
-    color: '#64748b',
+    color: Colors.premium.textDim,
     fontSize: 12,
     fontFamily: 'Outfit_400Regular',
   },
@@ -479,26 +428,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   harbourPriceCard: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#020617', // Darker than card
     borderRadius: 10,
     padding: 10,
     width: '48%',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.premium.border,
     marginBottom: 8,
   },
   harbourPriceCardActive: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#1e3a5f',
+    borderColor: Colors.premium.gold,
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
   },
   harbourPriceName: {
-    color: '#94a3b8',
+    color: Colors.premium.textDim,
     fontSize: 10,
     fontFamily: 'Outfit_600SemiBold',
     marginBottom: 4,
   },
   harbourPriceValue: {
-    color: 'white',
+    color: Colors.premium.text,
     fontSize: 18,
     fontFamily: 'Outfit_700Bold',
   },

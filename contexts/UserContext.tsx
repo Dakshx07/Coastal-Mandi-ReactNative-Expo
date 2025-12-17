@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/services/supabase';
+import { Session } from '@supabase/supabase-js';
 
 interface UserData {
+    id: string;
     name: string;
     email: string;
     isLoggedIn: boolean;
@@ -10,12 +12,14 @@ interface UserData {
 interface UserContextType {
     user: UserData;
     isLoading: boolean;
-    login: (name: string, email: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<{ error?: any }>;
+    signup: (email: string, password: string, name: string) => Promise<{ error?: any }>;
     logout: () => Promise<void>;
     updateUser: (data: Partial<UserData>) => Promise<void>;
 }
 
 const defaultUser: UserData = {
+    id: '',
     name: '',
     email: '',
     isLoggedIn: false,
@@ -28,59 +32,82 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Load user from storage on boot
-        const loadUser = async () => {
-            try {
-                const storedUser = await AsyncStorage.getItem('user_session');
-                if (storedUser) {
-                    setUser(JSON.parse(storedUser));
-                }
-            } catch (e) {
-                console.error('Failed to load user', e);
-            } finally {
-                setIsLoading(false);
+        // 1. Check active session on load
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                updateUserState(session);
             }
-        };
-        loadUser();
+            setIsLoading(false);
+        });
+
+        // 2. Listen for auth changes (login, logout, refresh)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session) {
+                updateUserState(session);
+            } else {
+                setUser(defaultUser);
+            }
+            setIsLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
-    const login = async (name: string, email: string) => {
-        const newUser = {
-            name: name || 'Coastal User',
-            email: email || 'user@coastal.app',
+    const updateUserState = (session: Session) => {
+        setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
             isLoggedIn: true,
-        };
-        setUser(newUser);
-        try {
-            await AsyncStorage.setItem('user_session', JSON.stringify(newUser));
-        } catch (e) {
-            console.error('Failed to save user', e);
-        }
+        });
+    };
+
+    const login = async (email: string, password: string) => {
+        setIsLoading(true);
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+        setIsLoading(false);
+        return { error };
+    };
+
+    const signup = async (email: string, password: string, name: string) => {
+        setIsLoading(true);
+        const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: name,
+                },
+            },
+        });
+        setIsLoading(false);
+        return { error };
     };
 
     const logout = async () => {
-        try {
-            await AsyncStorage.removeItem('user_session');
-        } catch (e) {
-            console.error('Failed to clear storage during logout', e);
-        } finally {
-            // Always reset state even if storage removal fails
-            setUser(defaultUser);
-        }
+        setIsLoading(true);
+        await supabase.auth.signOut();
+        setUser(defaultUser);
+        setIsLoading(false);
     };
 
     const updateUser = async (data: Partial<UserData>) => {
-        const updatedUser = { ...user, ...data };
-        setUser(updatedUser);
-        try {
-            await AsyncStorage.setItem('user_session', JSON.stringify(updatedUser));
-        } catch (e) {
-            console.error('Failed to update user', e);
+        // For simple metadata updates
+        if (data.name) {
+            const { error } = await supabase.auth.updateUser({
+                data: { full_name: data.name }
+            });
+            if (!error) {
+                setUser(prev => ({ ...prev, ...data }));
+            }
         }
     };
 
     return (
-        <UserContext.Provider value={{ user, isLoading, login, logout, updateUser }}>
+        <UserContext.Provider value={{ user, isLoading, login, signup, logout, updateUser }}>
             {children}
         </UserContext.Provider>
     );
